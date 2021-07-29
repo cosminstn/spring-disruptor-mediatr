@@ -1,4 +1,4 @@
-package tech.sharply.spring_disruptor_mediatr.sample.display_thing_command
+package tech.sharply.spring_disruptor_mediatr.samples
 
 import org.springframework.stereotype.Component
 import tech.sharply.spring_disruptor_mediatr.commands.Command

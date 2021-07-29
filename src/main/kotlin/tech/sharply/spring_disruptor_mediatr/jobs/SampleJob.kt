@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import tech.sharply.spring_disruptor_mediatr.commands.Command
 import tech.sharply.spring_disruptor_mediatr.commands.DisruptorCommandBus
-import tech.sharply.spring_disruptor_mediatr.sample.display_thing_command.PrintThingCommand
+import tech.sharply.spring_disruptor_mediatr.samples.PrintThingCommand
 import javax.annotation.PostConstruct
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*

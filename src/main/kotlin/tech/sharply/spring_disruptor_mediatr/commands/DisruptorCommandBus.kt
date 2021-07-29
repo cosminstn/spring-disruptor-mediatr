@@ -41,6 +41,9 @@ class DisruptorCommandBus(
         disruptor.start()
     }
 
+    /**
+     * Dispatches the command sync, i.e. without using the disruptor.
+     */
     fun <TCommand : Command> dispatch(command: TCommand) {
         val handler = commandRegistry.getCommandHandler(command.javaClass)
             ?: throw IllegalArgumentException("No command handler found for command type: " + command.javaClass)
@@ -48,6 +51,10 @@ class DisruptorCommandBus(
         handler.execute(CommandWrapper(command))
     }
 
+    /**
+     * Dispatches the command to the disruptor.
+     * TODO: A callback would be really nice.
+     */
     fun <TCommand : Command> dispatchAsync(command: TCommand) {
         val translator =
             EventTranslatorOneArg<CommandWrapper<Command>, TCommand> { event, sequence, input ->
