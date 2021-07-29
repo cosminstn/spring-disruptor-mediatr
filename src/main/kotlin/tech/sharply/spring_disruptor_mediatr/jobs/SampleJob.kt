@@ -9,6 +9,7 @@ import tech.sharply.spring_disruptor_mediatr.sample.display_thing_command.PrintT
 import javax.annotation.PostConstruct
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
+import org.springframework.scheduling.annotation.Scheduled
 
 @Component
 class SampleJob(
@@ -18,22 +19,12 @@ class SampleJob(
 
     @PostConstruct
     fun init() {
-        mediator.dispatchAsync(PrintThingCommand("penish"), object: EventTranslatorOneArg<Command, PrintThingCommand> {
-            override fun translateTo(event: Command?, sequence: Long, input: PrintThingCommand?) {
-                if (input == null) {
-                    return
-                }
-                // clone the input to remove any object references
-                var inputClone = deepClone(input)
-                var parsed = event as PrintThingCommand
-                parsed.thing = inputClone.thing
-            }
-        })
+        mediator.dispatch(PrintThingCommand("sync command execution"))
+        mediator.dispatchAsync(PrintThingCommand("async command execution"))
     }
 
-    companion object {
-        inline fun <reified T> deepClone(input: T): T {
-            return Json.decodeFromString(Json.encodeToString(input))
-        }
+    @Scheduled(fixedRate = 60_000)
+    private fun periodic() {
+        println("App still alive")
     }
 }
