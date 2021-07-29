@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.concurrent.ThreadFactory
+import java.util.function.Consumer
 import javax.annotation.PostConstruct
 
 @Component
@@ -18,11 +19,11 @@ class DisruptorCommandBus(
 ) {
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(DisruptorCommandBus.javaClass)
+        val log: Logger = LoggerFactory.getLogger(DisruptorCommandBus::class.java)
     }
 
     private val disruptor = Disruptor(
-        EventFactory { CommandWrapper<Command>(null) },
+        EventFactory { CommandWrapper<Command>(null, null) },
         1024,
         ThreadFactory { r -> Thread(r) }
     )
@@ -30,12 +31,20 @@ class DisruptorCommandBus(
     @PostConstruct
     private fun init() {
         disruptor.handleEventsWith(EventHandler { commandWrapper, sequence, endOfBatch ->
-            val handler = commandWrapper.payload?.let { commandRegistry.getCommandHandler(it.javaClass) }
+            if (commandWrapper.payload == null) {
+                println("Null command")
+                return@EventHandler
+            }
+            val command = commandWrapper.payload!!
+            val handler = commandRegistry.getCommandHandler(command.javaClass)
             if (handler == null) {
                 println("No command handler found for command type: " + commandWrapper.getCommandClass())
                 return@EventHandler
             }
             handler.execute(commandWrapper)
+            println(command.toString() + " executed on thread: " + Thread.currentThread().id)
+
+            commandWrapper.callback?.accept(commandWrapper.payload!!)
         })
 
         disruptor.start()
@@ -48,20 +57,26 @@ class DisruptorCommandBus(
         val handler = commandRegistry.getCommandHandler(command.javaClass)
             ?: throw IllegalArgumentException("No command handler found for command type: " + command.javaClass)
 
-        handler.execute(CommandWrapper(command))
+        handler.execute(CommandWrapper(command, null))
+        println(command.toString() + " executed on thread: " + Thread.currentThread().id)
+    }
+
+    fun <TCommand : Command> dispatchAsync(command: TCommand) {
+        dispatchAsync(command, null)
     }
 
     /**
      * Dispatches the command to the disruptor.
      * TODO: A callback would be really nice.
      */
-    fun <TCommand : Command> dispatchAsync(command: TCommand) {
+    fun <TCommand : Command> dispatchAsync(command: TCommand, callback: Consumer<TCommand>?) {
         val translator =
-            EventTranslatorOneArg<CommandWrapper<Command>, TCommand> { event, sequence, input ->
-                if (event == null) {
+            EventTranslatorOneArg<CommandWrapper<Command>, TCommand> { commandWrapper, sequence, input ->
+                if (commandWrapper == null) {
                     return@EventTranslatorOneArg
                 }
-                event.payload = input
+                commandWrapper.payload = input
+                commandWrapper.callback = callback as Consumer<Command>?
             }
         disruptor.publishEvent(translator, command)
     }

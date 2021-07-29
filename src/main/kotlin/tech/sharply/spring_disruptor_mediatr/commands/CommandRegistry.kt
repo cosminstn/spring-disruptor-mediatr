@@ -1,10 +1,10 @@
 package tech.sharply.spring_disruptor_mediatr.commands
 
-import kotlinx.serialization.Serializable
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.core.GenericTypeResolver
 import org.springframework.stereotype.Component
+import java.util.function.Consumer
 
 interface CommandRegistry {
 
@@ -62,10 +62,11 @@ class CommandRegistryImpl(
 interface Command
 
 open class CommandWrapper<TCommand : Command>(
-    var payload: TCommand?
+    var payload: TCommand?,
+    var callback: Consumer<TCommand>?
 )
 
-fun <TCommand: Command> CommandWrapper<TCommand>.getCommandClass(): Class<TCommand> {
+fun <TCommand : Command> CommandWrapper<TCommand>.getCommandClass(): Class<TCommand> {
     return (GenericTypeResolver.resolveTypeArgument(javaClass, CommandWrapper::class.java) as Class<TCommand>?)!!
 }
 

@@ -1,15 +1,11 @@
 package tech.sharply.spring_disruptor_mediatr.jobs
 
-import com.lmax.disruptor.EventTranslatorOneArg
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import tech.sharply.spring_disruptor_mediatr.commands.Command
 import tech.sharply.spring_disruptor_mediatr.commands.DisruptorCommandBus
 import tech.sharply.spring_disruptor_mediatr.samples.PrintThingCommand
 import javax.annotation.PostConstruct
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
-import org.springframework.scheduling.annotation.Scheduled
 
 @Component
 class SampleJob(
@@ -19,8 +15,12 @@ class SampleJob(
 
     @PostConstruct
     fun init() {
-        mediator.dispatch(PrintThingCommand("sync command execution"))
-        mediator.dispatchAsync(PrintThingCommand("async command execution"))
+        mediator.dispatch(PrintThingCommand("1 - sync"))
+        mediator.dispatchAsync(PrintThingCommand("2 - async"))
+        mediator.dispatchAsync(PrintThingCommand("3 - async with callback")) { command ->
+            println("callback for " + command.thing)
+            println("callback executed on thread: " + Thread.currentThread().id)
+        }
     }
 
     @Scheduled(fixedRate = 60_000)
