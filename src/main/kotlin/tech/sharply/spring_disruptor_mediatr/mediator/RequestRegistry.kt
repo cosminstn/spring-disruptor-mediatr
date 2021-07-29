@@ -1,4 +1,4 @@
-package tech.sharply.spring_disruptor_mediatr.commands
+package tech.sharply.spring_disruptor_mediatr.mediator
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
@@ -6,9 +6,9 @@ import org.springframework.core.GenericTypeResolver
 import org.springframework.stereotype.Component
 import java.util.function.Consumer
 
-interface CommandRegistry {
+interface RequestRegistry {
 
-    fun <TCommand : Command> getCommandHandler(commandClass: Class<TCommand>): CommandHandler<TCommand>?
+    fun <TRequest : Command> getCommandHandler(commandClass: Class<TRequest>): CommandHandler<TRequest>?
 
 }
 
@@ -41,7 +41,7 @@ class CommandRegistryImpl(
     }
 
     private fun registerCommandHandler(name: String) {
-        DisruptorCommandBus.log.debug("Registering CommandHandler with name $name")
+        MediatorImpl.log.debug("Registering CommandHandler with name $name")
         val handler = context.getBean(name) as CommandHandler<Command>
 
         val commandType = handler.getCommandClass()
@@ -52,7 +52,7 @@ class CommandRegistryImpl(
             )
         }
         commandRegistry[commandType] = handler
-        DisruptorCommandBus.log.info(
+        MediatorImpl.log.info(
             "Registered CommandHandler " + handler.javaClass.toString() + " to handle Command "
                     + commandType.simpleName
         )

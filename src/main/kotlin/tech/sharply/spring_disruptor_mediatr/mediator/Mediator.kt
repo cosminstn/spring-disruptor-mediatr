@@ -1,4 +1,4 @@
-package tech.sharply.spring_disruptor_mediatr.commands
+package tech.sharply.spring_disruptor_mediatr.mediator
 
 import com.lmax.disruptor.EventFactory
 import com.lmax.disruptor.EventHandler
@@ -12,14 +12,24 @@ import java.util.concurrent.ThreadFactory
 import java.util.function.Consumer
 import javax.annotation.PostConstruct
 
+interface Mediator {
+
+    fun <TCommand : Command> dispatch(command: TCommand)
+
+    fun <TCommand : Command> dispatchAsync(command: TCommand)
+
+    fun <TCommand : Command> dispatchAsync(command: TCommand, callback: Consumer<TCommand>?)
+
+}
+
 @Component
-class DisruptorCommandBus(
+class MediatorImpl(
     @Autowired
     private val commandRegistry: CommandRegistry
-) {
+) : Mediator {
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(DisruptorCommandBus::class.java)
+        val log: Logger = LoggerFactory.getLogger(MediatorImpl::class.java)
     }
 
     private val disruptor = Disruptor(
@@ -53,7 +63,7 @@ class DisruptorCommandBus(
     /**
      * Dispatches the command sync, i.e. without using the disruptor.
      */
-    fun <TCommand : Command> dispatch(command: TCommand) {
+    override fun <TCommand : Command> dispatch(command: TCommand) {
         val handler = commandRegistry.getCommandHandler(command.javaClass)
             ?: throw IllegalArgumentException("No command handler found for command type: " + command.javaClass)
 
@@ -61,15 +71,17 @@ class DisruptorCommandBus(
         println(command.toString() + " executed on thread: " + Thread.currentThread().id)
     }
 
-    fun <TCommand : Command> dispatchAsync(command: TCommand) {
+    /**
+     * Dispatches the command with no callback.
+     */
+    override fun <TCommand : Command> dispatchAsync(command: TCommand) {
         dispatchAsync(command, null)
     }
 
     /**
-     * Dispatches the command to the disruptor.
-     * TODO: A callback would be really nice.
+     * Dispatches the command to the disruptor, calling the specified callback after the command has been executed.
      */
-    fun <TCommand : Command> dispatchAsync(command: TCommand, callback: Consumer<TCommand>?) {
+    override fun <TCommand : Command> dispatchAsync(command: TCommand, callback: Consumer<TCommand>?) {
         val translator =
             EventTranslatorOneArg<CommandWrapper<Command>, TCommand> { commandWrapper, sequence, input ->
                 if (commandWrapper == null) {

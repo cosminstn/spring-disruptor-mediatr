@@ -3,14 +3,14 @@ package tech.sharply.spring_disruptor_mediatr.jobs
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import tech.sharply.spring_disruptor_mediatr.commands.DisruptorCommandBus
+import tech.sharply.spring_disruptor_mediatr.mediator.MediatorImpl
 import tech.sharply.spring_disruptor_mediatr.samples.PrintThingCommand
 import javax.annotation.PostConstruct
 
 @Component
 class SampleJob(
     @Autowired
-    val mediator: DisruptorCommandBus
+    val mediator: MediatorImpl
 ) {
 
     @PostConstruct

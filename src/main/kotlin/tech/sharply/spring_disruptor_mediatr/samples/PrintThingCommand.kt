@@ -1,9 +1,9 @@
 package tech.sharply.spring_disruptor_mediatr.samples
 
 import org.springframework.stereotype.Component
-import tech.sharply.spring_disruptor_mediatr.commands.Command
-import tech.sharply.spring_disruptor_mediatr.commands.CommandHandler
-import tech.sharply.spring_disruptor_mediatr.commands.CommandWrapper
+import tech.sharply.spring_disruptor_mediatr.mediator.Command
+import tech.sharply.spring_disruptor_mediatr.mediator.CommandHandler
+import tech.sharply.spring_disruptor_mediatr.mediator.CommandWrapper
 
 class PrintThingCommand(val thing: String) : Command {
 
