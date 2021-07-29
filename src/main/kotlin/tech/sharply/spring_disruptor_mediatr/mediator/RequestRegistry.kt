@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import org.springframework.core.GenericTypeResolver
 import org.springframework.stereotype.Component
+import java.util.function.BiConsumer
 import java.util.function.Consumer
 
 interface RequestRegistry {
@@ -51,7 +52,7 @@ class RequestRegistryImpl(
             )
         }
         requestRegistry[requestType] = handler
-        MediatorImpl.log.info(
+        MonoDisruptorMediatorImpl.log.info(
             "Registered RequestHandler " + handler.javaClass.toString() + " to handle Request "
                     + requestType.simpleName
         )
@@ -62,7 +63,7 @@ interface Request<TResponse>
 
 open class RequestWrapper<TRequest : Request<*>>(
     var payload: TRequest?,
-    var callback: Consumer<TRequest>?
+    var callback: BiConsumer<TRequest, *>?
 )
 
 fun <TRequest : Request<*>> RequestWrapper<TRequest>.getRequestClass(): Class<TRequest> {

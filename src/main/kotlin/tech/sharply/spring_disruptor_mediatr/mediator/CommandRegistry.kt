@@ -28,6 +28,10 @@ class CommandRegistryImpl(
         return commandRegistry[commandClass as Class<Command>] as CommandHandler<TCommand>?
     }
 
+    fun handleCommand(): Void {
+//        var c: Void = Void()
+    }
+
     private fun initializeHandlers() {
         synchronized(this) {
             if (!initialized) {
@@ -41,7 +45,7 @@ class CommandRegistryImpl(
     }
 
     private fun registerCommandHandler(name: String) {
-        MediatorImpl.log.debug("Registering CommandHandler with name $name")
+        MonoDisruptorMediatorImpl.log.debug("Registering CommandHandler with name $name")
         val handler = context.getBean(name) as CommandHandler<Command>
 
         val commandType = handler.getCommandClass()
@@ -52,7 +56,7 @@ class CommandRegistryImpl(
             )
         }
         commandRegistry[commandType] = handler
-        MediatorImpl.log.info(
+        MonoDisruptorMediatorImpl.log.info(
             "Registered CommandHandler " + handler.javaClass.toString() + " to handle Command "
                     + commandType.simpleName
         )
