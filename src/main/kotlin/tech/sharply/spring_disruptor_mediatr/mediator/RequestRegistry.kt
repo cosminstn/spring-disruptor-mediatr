@@ -8,74 +8,73 @@ import java.util.function.Consumer
 
 interface RequestRegistry {
 
-    fun <TRequest : Command> getCommandHandler(commandClass: Class<TRequest>): CommandHandler<TRequest>?
+    fun <TRequest : Request<TResponse>, TResponse> getRequestHandler(requestClass: Class<TRequest>): RequestHandler<TRequest, TResponse>?
 
 }
 
 @Component
-class CommandRegistryImpl(
+class RequestRegistryImpl(
     @Autowired
     private val context: ApplicationContext
-) : CommandRegistry {
+) : RequestRegistry {
 
-    private val commandRegistry: MutableMap<Class<Command>, CommandHandler<Command>> = HashMap()
+    private val requestRegistry: MutableMap<Class<Request<Any>>, RequestHandler<Request<Any>, Any>> = HashMap()
     private var initialized = false
 
-    override fun <TCommand : Command> getCommandHandler(commandClass: Class<TCommand>): CommandHandler<TCommand>? {
+    override fun <TRequest : Request<TResponse>, TResponse> getRequestHandler(requestClass: Class<TRequest>): RequestHandler<TRequest, TResponse>? {
         if (!initialized) {
             initializeHandlers()
         }
-        return commandRegistry[commandClass as Class<Command>] as CommandHandler<TCommand>?
+        return requestRegistry[requestClass as Class<Request<Any>>] as RequestHandler<TRequest, TResponse>?
     }
 
     private fun initializeHandlers() {
         synchronized(this) {
             if (!initialized) {
-                val commandHandlers: Array<String> = context.getBeanNamesForType(CommandHandler::class.java)
-                for (handler in commandHandlers) {
-                    registerCommandHandler(handler)
+                val handlers: Array<String> = context.getBeanNamesForType(RequestHandler::class.java)
+                for (handler in handlers) {
+                    registerRequestHandler(handler)
                 }
                 initialized = true
             }
         }
     }
 
-    private fun registerCommandHandler(name: String) {
-        MediatorImpl.log.debug("Registering CommandHandler with name $name")
-        val handler = context.getBean(name) as CommandHandler<Command>
+    private fun registerRequestHandler(name: String) {
+        val handler = context.getBean(name) as RequestHandler<Request<Any>, Any>
 
-        val commandType = handler.getCommandClass()
-        if (commandRegistry.containsKey(commandType)) {
+        val requestType = handler.getRequestClass()
+        if (requestRegistry.containsKey(requestType)) {
             throw IllegalArgumentException(
-                commandType.simpleName + " already has a registered handler. " +
-                        "Each command must have a single command handler!"
+                requestType.simpleName + " already has a registered handler. " +
+                        "Each request must have a single request handler!"
             )
         }
-        commandRegistry[commandType] = handler
+        requestRegistry[requestType] = handler
         MediatorImpl.log.info(
-            "Registered CommandHandler " + handler.javaClass.toString() + " to handle Command "
-                    + commandType.simpleName
+            "Registered RequestHandler " + handler.javaClass.toString() + " to handle Request "
+                    + requestType.simpleName
         )
     }
 }
 
-interface Command
+interface Request<TResponse>
 
-open class CommandWrapper<TCommand : Command>(
-    var payload: TCommand?,
-    var callback: Consumer<TCommand>?
+open class RequestWrapper<TRequest : Request<*>>(
+    var payload: TRequest?,
+    var callback: Consumer<TRequest>?
 )
 
-fun <TCommand : Command> CommandWrapper<TCommand>.getCommandClass(): Class<TCommand> {
-    return (GenericTypeResolver.resolveTypeArgument(javaClass, CommandWrapper::class.java) as Class<TCommand>?)!!
+fun <TRequest : Request<*>> RequestWrapper<TRequest>.getRequestClass(): Class<TRequest> {
+    return (GenericTypeResolver.resolveTypeArgument(javaClass, RequestWrapper::class.java) as Class<TRequest>?)!!
 }
 
-interface CommandHandler<TCommand : Command> {
+interface RequestHandler<TRequest : Request<TResponse>, TResponse> {
 
-    fun execute(command: CommandWrapper<TCommand>)
+    fun execute(request: RequestWrapper<TRequest>): TResponse
 
 }
 
-fun <TCommand : Command> CommandHandler<TCommand>.getCommandClass(): Class<TCommand> {
-    return (GenericTypeResolver.resolveTypeArgument(javaClass, CommandHandler::class.java) as Class<TCommand>?)!!
+fun <TRequest : Request<TResponse>, TResponse> RequestHandler<Request<TResponse>, TResponse>.getRequestClass(): Class<TRequest> {
+    return (GenericTypeResolver.resolveTypeArgument(javaClass, RequestHandler::class.java) as Class<TRequest>?)!!
 }

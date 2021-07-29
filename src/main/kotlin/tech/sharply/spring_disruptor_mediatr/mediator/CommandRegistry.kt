@@ -31,8 +31,8 @@ class CommandRegistryImpl(
     private fun initializeHandlers() {
         synchronized(this) {
             if (!initialized) {
-                val commandHandlers: Array<String> = context.getBeanNamesForType(CommandHandler::class.java)
-                for (handler in commandHandlers) {
+                val handlers: Array<String> = context.getBeanNamesForType(CommandHandler::class.java)
+                for (handler in handlers) {
                     registerCommandHandler(handler)
                 }
                 initialized = true
