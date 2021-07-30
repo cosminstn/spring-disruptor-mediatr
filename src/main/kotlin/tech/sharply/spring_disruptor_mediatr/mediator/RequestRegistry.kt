@@ -9,7 +9,10 @@ import java.util.function.Consumer
 
 interface RequestRegistry {
 
-    fun <TRequest : Request<TResponse>, TResponse> getRequestHandler(requestClass: Class<TRequest>): RequestHandler<TRequest, TResponse>?
+    fun <TRequest : Request<TResponse>, TResponse> getRequestHandler(requestClass: Class<TRequest>)
+            : RequestHandler<TRequest, TResponse>?
+
+
 
 }
 
@@ -59,23 +62,23 @@ class RequestRegistryImpl(
     }
 }
 
-interface Request<TResponse>
-
-open class RequestWrapper<TRequest : Request<*>>(
-    var payload: TRequest?,
-    var callback: BiConsumer<TRequest, *>?
-)
-
-fun <TRequest : Request<*>> RequestWrapper<TRequest>.getRequestClass(): Class<TRequest> {
-    return (GenericTypeResolver.resolveTypeArgument(javaClass, RequestWrapper::class.java) as Class<TRequest>?)!!
-}
-
-interface RequestHandler<TRequest : Request<TResponse>, TResponse> {
-
-    fun execute(request: RequestWrapper<TRequest>): TResponse
-
-}
-
-fun <TRequest : Request<TResponse>, TResponse> RequestHandler<Request<TResponse>, TResponse>.getRequestClass(): Class<TRequest> {
-    return (GenericTypeResolver.resolveTypeArgument(javaClass, RequestHandler::class.java) as Class<TRequest>?)!!
-}
+//interface Request<TResponse>
+//
+//open class RequestWrapper<TRequest : Request<*>>(
+//    var payload: TRequest?,
+//    var callback: BiConsumer<TRequest, *>?
+//)
+//
+//fun <TRequest : Request<*>> RequestWrapper<TRequest>.getRequestClass(): Class<TRequest> {
+//    return (GenericTypeResolver.resolveTypeArgument(javaClass, RequestWrapper::class.java) as Class<TRequest>?)!!
+//}
+//
+//interface RequestHandler<TRequest : Request<TResponse>, TResponse> {
+//
+//    fun execute(request: RequestWrapper<TRequest>): TResponse
+//
+//}
+//
+//fun <TRequest : Request<TResponse>, TResponse> RequestHandler<Request<TResponse>, TResponse>.getRequestClass(): Class<TRequest> {
+//    return (GenericTypeResolver.resolveTypeArgument(javaClass, RequestHandler::class.java) as Class<TRequest>?)!!
+//}

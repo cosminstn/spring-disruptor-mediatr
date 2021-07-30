@@ -6,11 +6,11 @@ import org.springframework.core.GenericTypeResolver
 import org.springframework.stereotype.Component
 import java.util.function.Consumer
 
-interface CommandRegistry {
-
-    fun <TCommand : Command> getCommandHandler(commandClass: Class<TCommand>): CommandHandler<TCommand>?
-
-}
+//interface CommandRegistry {
+//
+//    fun <TCommand : Command> getCommandHandler(commandClass: Class<TCommand>): CommandHandler<TCommand>?
+//
+//}
 
 @Component
 class CommandRegistryImpl(
@@ -28,8 +28,9 @@ class CommandRegistryImpl(
         return commandRegistry[commandClass as Class<Command>] as CommandHandler<TCommand>?
     }
 
-    fun handleCommand(): Void {
+    fun handleCommand(): Unit {
 //        var c: Void = Void()
+
     }
 
     private fun initializeHandlers() {
@@ -62,24 +63,24 @@ class CommandRegistryImpl(
         )
     }
 }
-
-interface Command
-
-open class CommandWrapper<TCommand : Command>(
-    var payload: TCommand?,
-    var callback: Consumer<TCommand>?
-)
-
-fun <TCommand : Command> CommandWrapper<TCommand>.getCommandClass(): Class<TCommand> {
-    return (GenericTypeResolver.resolveTypeArgument(javaClass, CommandWrapper::class.java) as Class<TCommand>?)!!
-}
-
-interface CommandHandler<TCommand : Command> {
-
-    fun execute(command: CommandWrapper<TCommand>)
-
-}
-
-fun <TCommand : Command> CommandHandler<TCommand>.getCommandClass(): Class<TCommand> {
-    return (GenericTypeResolver.resolveTypeArgument(javaClass, CommandHandler::class.java) as Class<TCommand>?)!!
-}
+//
+//interface Command
+//
+//open class CommandWrapper<TCommand : Command>(
+//    var payload: TCommand?,
+//    var callback: Consumer<TCommand>?
+//)
+//
+//fun <TCommand : Command> CommandWrapper<TCommand>.getCommandClass(): Class<TCommand> {
+//    return (GenericTypeResolver.resolveTypeArgument(javaClass, CommandWrapper::class.java) as Class<TCommand>?)!!
+//}
+//
+//interface CommandHandler<TCommand : Command> {
+//
+//    fun execute(command: CommandWrapper<TCommand>)
+//
+//}
+//
+//fun <TCommand : Command> CommandHandler<TCommand>.getCommandClass(): Class<TCommand> {
+//    return (GenericTypeResolver.resolveTypeArgument(javaClass, CommandHandler::class.java) as Class<TCommand>?)!!
+//}
