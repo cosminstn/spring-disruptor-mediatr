@@ -43,7 +43,7 @@ class MonoDisruptorMediatorImpl(
 ) : Mediator {
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(MonoDisruptorMediatorImpl::class.java)
+        private val log: Logger = LoggerFactory.getLogger(MonoDisruptorMediatorImpl::class.java)
     }
 
     private val disruptor = Disruptor(
