@@ -3,23 +3,24 @@ package tech.sharply.spring_disruptor_mediatr.jobs
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import tech.sharply.spring_disruptor_mediatr.mediator.Mediator
 import tech.sharply.spring_disruptor_mediatr.mediator.MonoDisruptorMediatorImpl
 import tech.sharply.spring_disruptor_mediatr.samples.PrintThingCommand
+import java.util.function.BiConsumer
 import javax.annotation.PostConstruct
 
 @Component
 class SampleJob(
     @Autowired
-    val mediator: MonoDisruptorMediatorImpl
+    val mediator: Mediator
 ) {
 
     @PostConstruct
     fun init() {
         mediator.dispatchBlocking(PrintThingCommand("1 - sync"))
         mediator.dispatchAsync(PrintThingCommand("2 - async"))
-        mediator.dispatchAsync(PrintThingCommand("3 - async with callback")) { command ->
-            println("callback for " + command.thing)
-            println("callback executed on thread: " + Thread.currentThread().id)
+        mediator.dispatchAsync(PrintThingCommand("3 - async with callback")) { command, _ ->
+            println("Executed callback for $command on thread: " + Thread.currentThread().id)
         }
     }
 

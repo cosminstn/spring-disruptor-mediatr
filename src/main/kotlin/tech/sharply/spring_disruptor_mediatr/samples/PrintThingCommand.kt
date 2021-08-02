@@ -3,7 +3,6 @@ package tech.sharply.spring_disruptor_mediatr.samples
 import org.springframework.stereotype.Component
 import tech.sharply.spring_disruptor_mediatr.mediator.Command
 import tech.sharply.spring_disruptor_mediatr.mediator.CommandHandler
-import tech.sharply.spring_disruptor_mediatr.mediator.CommandWrapper
 
 class PrintThingCommand(val thing: String) : Command {
 
@@ -13,10 +12,10 @@ class PrintThingCommand(val thing: String) : Command {
 }
 
 @Component
-class DisplayThingCommandHandler : CommandHandler<PrintThingCommand> {
+class PrintThingCommandHandler : CommandHandler<PrintThingCommand> {
 
-    override fun execute(commandWrapper: CommandWrapper<PrintThingCommand>) {
-        println(commandWrapper.payload?.thing)
+    override fun handle(request: PrintThingCommand) {
+        println(request.thing)
     }
 
 }
