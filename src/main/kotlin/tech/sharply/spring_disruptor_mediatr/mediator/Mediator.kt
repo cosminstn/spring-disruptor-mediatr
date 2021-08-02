@@ -58,7 +58,7 @@ class MonoDisruptorMediatorImpl(
 
             val result: Any?
             when (request) {
-                is CommandWithResult -> {
+                is Command -> {
                     val handler = registry.getCommandHandler(request.javaClass)
                     if (handler == null) {
                         log.info("No command handler found for command type: " + request.javaClass)
@@ -89,8 +89,8 @@ class MonoDisruptorMediatorImpl(
 
     private fun <TRequest : Request<TResponse>, TResponse> getRequestHandler(request: TRequest): RequestHandler<TRequest, TResponse>? {
         return when (request) {
-            is CommandWithResult<*> -> {
-                registry.getCommandHandler((request as CommandWithResult<*>).javaClass) as RequestHandler<TRequest, TResponse>
+            is Command<*> -> {
+                registry.getCommandHandler((request as Command<*>).javaClass) as RequestHandler<TRequest, TResponse>
             }
             is Query<*> -> {
                 registry.getQueryHandler((request as Query<*>).javaClass) as RequestHandler<TRequest, TResponse>

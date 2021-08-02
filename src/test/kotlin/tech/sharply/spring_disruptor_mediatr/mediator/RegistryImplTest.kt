@@ -17,7 +17,7 @@ internal class RegistryImplTest(
 
     internal class PrintNumberCommand(val number: Int) : Command
 
-    internal class GenerateNumberCommand : CommandWithResult<Int>
+    internal class GenerateNumberCommand : Command<Int>
 
     internal class FindNextNumberQuery(val number: Int) : Query<Int>
 
@@ -34,8 +34,8 @@ internal class RegistryImplTest(
         }
 
         @Bean
-        fun generateNumberCommandHandler(): CommandWithResultHandler<GenerateNumberCommand, Int> {
-            return object : CommandWithResultHandler<GenerateNumberCommand, Int> {
+        fun generateNumberCommandHandler(): CommandHandler<GenerateNumberCommand, Int> {
+            return object : CommandHandler<GenerateNumberCommand, Int> {
                 override fun handle(request: GenerateNumberCommand): Int {
                     return (Math.random() * 100).toInt()
                 }

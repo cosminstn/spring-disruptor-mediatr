@@ -7,8 +7,8 @@ import java.util.function.BiConsumer
 
 interface Registry {
 
-    fun <TCommand : CommandWithResult<TResponse>, TResponse> getCommandHandler(commandClass: Class<TCommand>)
-            : CommandWithResultHandler<TCommand, TResponse>?
+    fun <TCommand : Command<TResponse>, TResponse> getCommandHandler(commandClass: Class<TCommand>)
+            : CommandHandler<TCommand, TResponse>?
 
     fun <TQuery : Query<TResponse>, TResponse> getQueryHandler(queryClass: Class<TQuery>)
             : QueryHandler<TQuery, TResponse>?
@@ -24,14 +24,14 @@ class RegistryImpl(
     }
 
     private val requestHandlersByName = HashMap<String, RequestHandler<*, *>>()
-    private val commandWithResultHandlersByType:
-            MutableMap<Class<CommandWithResult<*>>, CommandWithResultHandler<CommandWithResult<*>, *>> = HashMap()
+    private val commandHandlersByType:
+            MutableMap<Class<Command<*>>, CommandHandler<Command<*>, *>> = HashMap()
     private val queryHandlersByType: MutableMap<Class<Query<*>>, QueryHandler<Query<*>, *>> = HashMap()
 
     init {
-        for (handler in context.getBeansOfType(CommandWithResultHandler::class.java)) {
-            registerCommandWithResultHandler(
-                handler.key, handler.value as CommandWithResultHandler<CommandWithResult<*>, *>
+        for (handler in context.getBeansOfType(CommandHandler::class.java)) {
+            registerCommandHandler(
+                handler.key, handler.value as CommandHandler<Command<*>, *>
             )
         }
         for (handler in context.getBeansOfType(QueryHandler::class.java)) {
@@ -39,11 +39,11 @@ class RegistryImpl(
         }
     }
 
-    private fun <TCommand : CommandWithResult<TResponse>, TResponse> registerCommandWithResultHandler(
+    private fun <TCommand : Command<TResponse>, TResponse> registerCommandHandler(
         name: String,
-        handler: CommandWithResultHandler<TCommand, TResponse>
+        handler: CommandHandler<TCommand, TResponse>
     ) {
-        log.debug("Registering CommandWithResultHandler with name $handler")
+        log.debug("Registering CommandHandler with name $handler")
 
         if (requestHandlersByName.containsKey(name)) {
             throw IllegalArgumentException("There is already a request handler with the name $name registered!")
@@ -56,10 +56,10 @@ class RegistryImpl(
                         "Each command must have a single command handler!"
             )
         }
-        commandWithResultHandlersByType[commandType as Class<CommandWithResult<*>>] =
-            handler as CommandWithResultHandler<CommandWithResult<*>, *>
+        commandHandlersByType[commandType as Class<Command<*>>] =
+            handler as CommandHandler<Command<*>, *>
         log.info(
-            "Registered CommandWithResultHandler " + handler.javaClass.toString() + " to handle CommandWithResult "
+            "Registered CommandHandler " + handler.javaClass.toString() + " to handle Command "
                     + commandType.simpleName
         )
     }
@@ -68,7 +68,7 @@ class RegistryImpl(
         name: String,
         handler: QueryHandler<TQuery, TResponse>
     ) {
-        log.debug("Registering CommandWithResultHandler with name $handler")
+        log.debug("Registering CommandHandler with name $handler")
 
         if (requestHandlersByName.containsKey(name)) {
             throw IllegalArgumentException("There is already a request handler with the name $name registered!")
@@ -88,10 +88,10 @@ class RegistryImpl(
         )
     }
 
-    override fun <TCommand : CommandWithResult<TResponse>, TResponse> getCommandHandler(commandClass: Class<TCommand>)
-            : CommandWithResultHandler<TCommand, TResponse>? {
-        return commandWithResultHandlersByType[commandClass as Class<CommandWithResult<*>>]
-                as CommandWithResultHandler<TCommand, TResponse>?
+    override fun <TCommand : Command<TResponse>, TResponse> getCommandHandler(commandClass: Class<TCommand>)
+            : CommandHandler<TCommand, TResponse>? {
+        return commandHandlersByType[commandClass as Class<Command<*>>]
+                as CommandHandler<TCommand, TResponse>?
     }
 
     override fun <TQuery : Query<TResponse>, TResponse> getQueryHandler(queryClass: Class<TQuery>)
@@ -140,14 +140,14 @@ interface RequestHandler<TRequest : Request<TResponse>, TResponse> {
 
 // region Command
 
-interface CommandWithResult<TResponse> : Request<TResponse>
+interface Command<TResponse> : Request<TResponse>
 
-interface CommandWithResultHandler<TCommand : CommandWithResult<TResponse>, TResponse> :
+interface CommandHandler<TCommand : Command<TResponse>, TResponse> :
     RequestHandler<TCommand, TResponse>
 
-fun <TCommand : CommandWithResult<TResponse>, TResponse> CommandWithResultHandler<TCommand, TResponse>.getCommandClass(): Class<TCommand> {
+fun <TCommand : Command<TResponse>, TResponse> CommandHandler<TCommand, TResponse>.getCommandClass(): Class<TCommand> {
 //    return (javaClass as ParameterizedType).actualTypeArguments[0].javaClass as Class<TCommand>
-    val firstGeneric = GenericTypeResolver.resolveTypeArguments(javaClass, CommandWithResultHandler::class.java)?.get(0)
+    val firstGeneric = GenericTypeResolver.resolveTypeArguments(javaClass, CommandHandler::class.java)?.get(0)
     return firstGeneric as Class<TCommand>
 }
 
