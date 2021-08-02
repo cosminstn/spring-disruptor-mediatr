@@ -23,19 +23,25 @@ class RegistryImpl(
         private val log = LoggerFactory.getLogger(RegistryImpl::class.java)
     }
 
-    private val requestHandlersByName = HashMap<String, RequestHandler<*, *>>()
+    private val handlersByName = HashMap<String, RequestHandler<*, *>>()
     private val commandHandlersByType:
             MutableMap<Class<Command<*>>, CommandHandler<Command<*>, *>> = HashMap()
     private val queryHandlersByType: MutableMap<Class<Query<*>>, QueryHandler<Query<*>, *>> = HashMap()
 
     init {
+        registerHandlers()
+    }
+
+    /**
+     * Iterates through all the CommandHandler and QueryHandler beans in the ApplicationContext and maps them
+     * to their request class.
+     */
+    private fun registerHandlers() {
         for (handler in context.getBeansOfType(CommandHandler::class.java)) {
-            registerCommandHandler(
-                handler.key, handler.value as CommandHandler<Command<*>, *>
-            )
+            registerCommandHandler(handler.key, handler.value)
         }
         for (handler in context.getBeansOfType(QueryHandler::class.java)) {
-            registerQueryHandler(handler.key, handler.value as QueryHandler<Query<*>, *>)
+            registerQueryHandler(handler.key, handler.value)
         }
     }
 
@@ -45,8 +51,10 @@ class RegistryImpl(
     ) {
         log.debug("Registering CommandHandler with name $handler")
 
-        if (requestHandlersByName.containsKey(name)) {
-            throw IllegalArgumentException("There is already a request handler with the name $name registered!")
+        if (handlersByName.containsKey(name)) {
+            if (handler != handlersByName[name]) {
+                throw IllegalArgumentException("There is already a request handler with the name $name registered!")
+            }
         }
 
         val commandType = handler.getCommandClass()
@@ -56,8 +64,8 @@ class RegistryImpl(
                         "Each command must have a single command handler!"
             )
         }
-        commandHandlersByType[commandType as Class<Command<*>>] =
-            handler as CommandHandler<Command<*>, *>
+        commandHandlersByType[commandType as Class<Command<*>>] = handler as CommandHandler<Command<*>, *>
+        handlersByName[name] = handler
         log.info(
             "Registered CommandHandler " + handler.javaClass.toString() + " to handle Command "
                     + commandType.simpleName
@@ -70,8 +78,10 @@ class RegistryImpl(
     ) {
         log.debug("Registering CommandHandler with name $handler")
 
-        if (requestHandlersByName.containsKey(name)) {
-            throw IllegalArgumentException("There is already a request handler with the name $name registered!")
+        if (handlersByName.containsKey(name)) {
+            if (handler != handlersByName[name]) {
+                throw IllegalArgumentException("There is already a request handler with the name $name registered!")
+            }
         }
 
         val queryType = handler.getCommandClass()
@@ -82,6 +92,7 @@ class RegistryImpl(
             )
         }
         queryHandlersByType[queryType as Class<Query<*>>] = handler as QueryHandler<Query<*>, *>
+        handlersByName[name] = handler
         log.info(
             "Registered QueryHandler " + handler.javaClass.toString() + " to handle Query "
                     + queryType.simpleName
@@ -90,13 +101,21 @@ class RegistryImpl(
 
     override fun <TCommand : Command<TResponse>, TResponse> getCommandHandler(commandClass: Class<TCommand>)
             : CommandHandler<TCommand, TResponse>? {
-        return commandHandlersByType[commandClass as Class<Command<*>>]
+        val handler = commandHandlersByType[commandClass as Class<Command<*>>]
                 as CommandHandler<TCommand, TResponse>?
+        if (handler == null) {
+            registerHandlers()
+        }
+        return handler
     }
 
     override fun <TQuery : Query<TResponse>, TResponse> getQueryHandler(queryClass: Class<TQuery>)
             : QueryHandler<TQuery, TResponse>? {
-        return queryHandlersByType[queryClass as Class<Query<*>>] as QueryHandler<TQuery, TResponse>?
+        val handler = queryHandlersByType[queryClass as Class<Query<*>>] as QueryHandler<TQuery, TResponse>?
+        if (handler == null) {
+            registerHandlers()
+        }
+        return handler
     }
 
 }
@@ -118,8 +137,8 @@ interface Command<TResponse> : Request<TResponse>
 interface CommandHandler<TCommand : Command<TResponse>, TResponse> :
     RequestHandler<TCommand, TResponse>
 
+@Suppress("UNCHECKED_CAST")
 fun <TCommand : Command<TResponse>, TResponse> CommandHandler<TCommand, TResponse>.getCommandClass(): Class<TCommand> {
-//    return (javaClass as ParameterizedType).actualTypeArguments[0].javaClass as Class<TCommand>
     val firstGeneric = GenericTypeResolver.resolveTypeArguments(javaClass, CommandHandler::class.java)?.get(0)
     return firstGeneric as Class<TCommand>
 }
@@ -132,6 +151,7 @@ interface Query<TResponse> : Request<TResponse>
 
 interface QueryHandler<TQuery : Query<TResponse>, TResponse> : RequestHandler<TQuery, TResponse>
 
+@Suppress("UNCHECKED_CAST")
 fun <TQuery : Query<TResponse>, TResponse> QueryHandler<TQuery, TResponse>.getCommandClass(): Class<TQuery> {
     val firstGeneric = GenericTypeResolver.resolveTypeArguments(javaClass, QueryHandler::class.java)?.get(0)
     return firstGeneric as Class<TQuery>

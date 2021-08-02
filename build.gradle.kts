@@ -26,10 +26,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
     // https://mvnrepository.com/artifact/com.lmax/disruptor
     implementation("com.lmax:disruptor:3.4.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
