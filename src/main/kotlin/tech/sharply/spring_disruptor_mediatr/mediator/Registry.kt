@@ -3,7 +3,6 @@ package tech.sharply.spring_disruptor_mediatr.mediator
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import org.springframework.core.GenericTypeResolver
-import java.util.function.BiConsumer
 
 interface Registry {
 
@@ -117,19 +116,6 @@ fun <TResponse> Request<TResponse>.getType(): RequestType {
         return RequestType.QUERY
     }
     return RequestType.COMMAND
-}
-
-open class RequestWrapper<TRequest : Request<*>>(
-    var payload: TRequest?,
-    var consumer: BiConsumer<TRequest, Any?>?
-) {
-    companion object {
-        val FACTORY: () -> RequestWrapper<Request<*>> = { RequestWrapper(null, null) }
-    }
-}
-
-private fun <TRequest : Request<*>> RequestWrapper<TRequest>.getRequestClass(): Class<TRequest> {
-    return (GenericTypeResolver.resolveTypeArgument(javaClass, RequestWrapper::class.java) as Class<TRequest>?)!!
 }
 
 interface RequestHandler<TRequest : Request<TResponse>, TResponse> {

@@ -17,9 +17,11 @@ class SampleJob(
     fun init() {
         mediator.dispatchBlocking(PrintThingCommand("1 - sync"))
         mediator.dispatchAsync(PrintThingCommand("2 - async"))
-        mediator.dispatchAsync(PrintThingCommand("3 - async with callback")) { command, _ ->
-            println("Executed callback for $command on thread: " + Thread.currentThread().id)
-        }
+
+        val completableCommand = PrintThingCommand("4 - future")
+        println("Launching Completable future command: $completableCommand")
+        mediator.dispatchAsync(completableCommand).get()
+        println("Completable future command finished executing$completableCommand")
     }
 
     @Scheduled(fixedRate = 60_000)

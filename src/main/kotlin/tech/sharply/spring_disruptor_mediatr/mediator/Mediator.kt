@@ -7,8 +7,8 @@ import com.lmax.disruptor.dsl.Disruptor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadFactory
-import java.util.function.BiConsumer
 import javax.annotation.PostConstruct
 
 interface Mediator {
@@ -18,12 +18,7 @@ interface Mediator {
      */
     fun <TRequest : Request<TResponse>, TResponse> dispatchBlocking(request: TRequest): TResponse
 
-    fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest)
-
-    fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(
-        request: TRequest,
-        callback: BiConsumer<TRequest, TResponse>?
-    )
+    fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest): CompletableFuture<TResponse>
 
 }
 
@@ -40,8 +35,8 @@ class MonoDisruptorMediatorImpl(
 
     private val registry = RegistryImpl(context)
 
-    private val disruptor = Disruptor<RequestWrapper<Request<Any?>>>(
-        EventFactory { RequestWrapper(null, null) },
+    private val disruptor = Disruptor(
+        EventFactory { CompletableRequestWrapper.empty() },
         1024,
         ThreadFactory { r -> Thread(r) }
     )
@@ -63,7 +58,7 @@ class MonoDisruptorMediatorImpl(
             }
             val result = handler.handle(request)
 
-            wrapper.consumer?.accept(wrapper.payload!!, result)
+            wrapper.completableFuture.complete(result)
             log.info("Consumer for request: " + wrapper.payload!! + " consumed on " + Thread.currentThread().id)
         })
 
@@ -93,27 +88,41 @@ class MonoDisruptorMediatorImpl(
         return handler.handle(request)
     }
 
-    override fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest) {
-        dispatchAsync(request, null)
+    override fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest): CompletableFuture<TResponse> {
+        val future = CompletableFuture<TResponse>()
+        disruptor.publishEvent(getTranslator(future), request)
+        return future
     }
 
-    override fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(
-        request: TRequest,
-        callback: BiConsumer<TRequest, TResponse>?
-    ) {
-        disruptor.publishEvent(getTranslator(callback), request)
-    }
-
-    private fun <TRequest : Request<TResponse>, TResponse> getTranslator(callback: BiConsumer<TRequest, TResponse>?):
-            EventTranslatorOneArg<RequestWrapper<Request<Any?>>, TRequest> {
-        return EventTranslatorOneArg<RequestWrapper<Request<Any?>>, TRequest> { wrapper, _, input ->
+    private fun <TRequest : Request<TResponse>, TResponse> getTranslator(
+        completableFuture: CompletableFuture<TResponse>?
+    ):
+            EventTranslatorOneArg<CompletableRequestWrapper<Request<Any?>, Any?>, TRequest> {
+        return EventTranslatorOneArg<CompletableRequestWrapper<Request<Any?>, Any?>, TRequest> { wrapper, _, input ->
             if (wrapper == null) {
                 return@EventTranslatorOneArg
             }
 
             wrapper.payload = input as Request<Any?>
-            wrapper.consumer = callback as BiConsumer<Request<Any?>, Any?>?
+            wrapper.completableFuture = completableFuture as CompletableFuture<Any?>? ?: CompletableFuture<Any?>()
         }
     }
 
+    private class CompletableRequestWrapper<TRequest : Request<TResponse>, TResponse>(
+        var payload: TRequest?,
+        var completableFuture: CompletableFuture<TResponse> = CompletableFuture()
+    ) {
+
+        fun clear() {
+            this.payload = null
+            this.completableFuture = CompletableFuture<TResponse>()
+        }
+
+        companion object {
+            fun empty(): CompletableRequestWrapper<Request<Any?>, Any?> {
+                return CompletableRequestWrapper(null)
+            }
+        }
+
+    }
 }
