@@ -145,6 +145,20 @@ class RegistryImpl(
 // TODO: This interface should not be exposed
 interface Request<TResponse>
 
+enum class RequestType {
+
+    COMMAND,
+    QUERY
+
+}
+
+fun <TResponse> Request<TResponse>.getType(): RequestType {
+    if (this is Query) {
+        return RequestType.QUERY
+    }
+    return RequestType.COMMAND
+}
+
 open class RequestWrapper<TRequest : Request<*>>(
     var payload: TRequest?,
     var consumer: BiConsumer<TRequest, *>?
@@ -158,7 +172,9 @@ private fun <TRequest : Request<*>> RequestWrapper<TRequest>.getRequestClass(): 
     return (GenericTypeResolver.resolveTypeArgument(javaClass, RequestWrapper::class.java) as Class<TRequest>?)!!
 }
 
-interface RequestHandler<TRequest : Request<TResponse>, TResponse>
+interface RequestHandler<TRequest : Request<TResponse>, TResponse> {
+    fun handle(request: TRequest): TResponse
+}
 
 // endregion
 
@@ -166,11 +182,7 @@ interface RequestHandler<TRequest : Request<TResponse>, TResponse>
 
 interface Command : Request<Unit>
 
-interface CommandHandler<TCommand : Command> : RequestHandler<TCommand, Unit> {
-
-    fun handle(command: TCommand)
-
-}
+interface CommandHandler<TCommand : Command> : RequestHandler<TCommand, Unit>
 
 fun <TCommand : Command> CommandHandler<TCommand>.getCommandClass(): Class<TCommand> {
     return (GenericTypeResolver.resolveTypeArgument(javaClass, CommandHandler::class.java) as Class<TCommand>?)!!
@@ -183,10 +195,7 @@ fun <TCommand : Command> CommandHandler<TCommand>.getCommandClass(): Class<TComm
 interface CommandWithResult<TResponse> : Request<TResponse>
 
 interface CommandWithResultHandler<TCommand : CommandWithResult<TResponse>, TResponse> :
-    RequestHandler<TCommand, TResponse> {
-
-    fun handle(command: TCommand): TResponse
-}
+    RequestHandler<TCommand, TResponse>
 
 fun <TCommand : CommandWithResult<TResponse>, TResponse> CommandWithResultHandler<TCommand, TResponse>.getCommandClass(): Class<TCommand> {
     return (javaClass as ParameterizedType).actualTypeArguments[0].javaClass as Class<TCommand>
@@ -198,11 +207,7 @@ fun <TCommand : CommandWithResult<TResponse>, TResponse> CommandWithResultHandle
 
 interface Query<TResponse> : Request<TResponse>
 
-interface QueryHandler<TQuery : Query<TResponse>, TResponse> : RequestHandler<TQuery, TResponse> {
-
-    fun handle(query: TQuery)
-
-}
+interface QueryHandler<TQuery : Query<TResponse>, TResponse> : RequestHandler<TQuery, TResponse>
 
 fun <TQuery : Query<TResponse>, TResponse> QueryHandler<TQuery, TResponse>.getCommandClass(): Class<TQuery> {
     return (javaClass as ParameterizedType).actualTypeArguments[0].javaClass as Class<TQuery>
