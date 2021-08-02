@@ -9,6 +9,7 @@ class PrintThingCommand(val thing: String) : Command<Unit> {
     override fun toString(): String {
         return "PrintThingCommand(thing=${thing})"
     }
+
 }
 
 @Component

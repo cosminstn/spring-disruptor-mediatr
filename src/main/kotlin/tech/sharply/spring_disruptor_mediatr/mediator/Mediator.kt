@@ -56,28 +56,12 @@ class MonoDisruptorMediatorImpl(
 
             val request = wrapper.payload!!
 
-            val result: Any?
-            when (request) {
-                is Command -> {
-                    val handler = registry.getCommandHandler(request.javaClass)
-                    if (handler == null) {
-                        log.info("No command handler found for command type: " + request.javaClass)
-                        return@EventHandler
-                    }
-                    result = handler.handle(request)
-                }
-                is Query -> {
-                    val handler = registry.getQueryHandler(request.javaClass)
-                    if (handler == null) {
-                        log.info("No command handler found for command type: " + request.javaClass)
-                        return@EventHandler
-                    }
-                    result = handler.handle(request)
-                }
-                else -> {
-                    return@EventHandler
-                }
+            val handler = getRequestHandler(request)
+            if (handler == null) {
+                log.info("No handler found for request type: " + request.javaClass)
+                return@EventHandler
             }
+            val result = handler.handle(request)
 
             wrapper.consumer?.accept(wrapper.payload!!, result)
             log.info("Consumer for request: " + wrapper.payload!! + " consumed on " + Thread.currentThread().id)

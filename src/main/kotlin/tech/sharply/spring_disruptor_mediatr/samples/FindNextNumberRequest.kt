@@ -10,6 +10,7 @@ class FindNextNumberRequest(
 
 @Component
 class FindNextNumberRequestHandler : QueryHandler<FindNextNumberRequest, Int> {
+
     override fun handle(request: FindNextNumberRequest): Int {
         return request.number + 1
     }
