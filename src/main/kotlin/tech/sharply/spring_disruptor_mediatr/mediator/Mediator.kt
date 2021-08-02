@@ -58,15 +58,6 @@ class MonoDisruptorMediatorImpl(
 
             val result: Any?
             when (request) {
-                is Command -> {
-                    val handler = registry.getCommandHandler(request.javaClass)
-                    if (handler == null) {
-                        log.info("No command handler found for command type: " + request.javaClass)
-                        return@EventHandler
-                    }
-                    result = handler.handle(request)
-                    log.info(request.toString() + " executed on thread: " + Thread.currentThread().id)
-                }
                 is CommandWithResult -> {
                     val handler = registry.getCommandHandler(request.javaClass)
                     if (handler == null) {
@@ -98,9 +89,6 @@ class MonoDisruptorMediatorImpl(
 
     private fun <TRequest : Request<TResponse>, TResponse> getRequestHandler(request: TRequest): RequestHandler<TRequest, TResponse>? {
         return when (request) {
-            is Command -> {
-                registry.getCommandHandler(request.javaClass) as RequestHandler<TRequest, TResponse>
-            }
             is CommandWithResult<*> -> {
                 registry.getCommandHandler((request as CommandWithResult<*>).javaClass) as RequestHandler<TRequest, TResponse>
             }
@@ -117,7 +105,7 @@ class MonoDisruptorMediatorImpl(
         // find the handle and execute it on the current thread
         val handler = getRequestHandler(request)
             ?: throw IllegalArgumentException("No handler found for request type " + request.javaClass)
-        log.info("Executing request $request blocking on thread: ${Thread.currentThread().id}" )
+        log.info("Executing request $request blocking on thread: ${Thread.currentThread().id}")
         return handler.handle(request)
     }
 
