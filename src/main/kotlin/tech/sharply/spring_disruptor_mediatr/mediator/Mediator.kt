@@ -65,7 +65,7 @@ class MonoDisruptorMediatorImpl(
         disruptor.start()
     }
 
-
+    @Suppress("UNCHECKED_CAST")
     private fun <TRequest : Request<TResponse>, TResponse> getRequestHandler(request: TRequest): RequestHandler<TRequest, TResponse>? {
         return when (request) {
             is Command<*> -> {
@@ -94,6 +94,7 @@ class MonoDisruptorMediatorImpl(
         return future
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun <TRequest : Request<TResponse>, TResponse> getTranslator(
         completableFuture: CompletableFuture<TResponse>?
     ):

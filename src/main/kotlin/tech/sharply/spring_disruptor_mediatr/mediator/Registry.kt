@@ -14,6 +14,7 @@ interface Registry {
 
 }
 
+@Suppress("UNCHECKED_CAST")
 class RegistryImpl(
     private val context: ApplicationContext
 ) : Registry {
@@ -103,20 +104,6 @@ class RegistryImpl(
 // region Request
 // TODO: This interface should not be exposed
 interface Request<TResponse>
-
-enum class RequestType {
-
-    COMMAND,
-    QUERY
-
-}
-
-fun <TResponse> Request<TResponse>.getType(): RequestType {
-    if (this is Query) {
-        return RequestType.QUERY
-    }
-    return RequestType.COMMAND
-}
 
 interface RequestHandler<TRequest : Request<TResponse>, TResponse> {
     fun handle(request: TRequest): TResponse
