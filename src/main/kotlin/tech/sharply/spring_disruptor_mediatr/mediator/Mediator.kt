@@ -31,7 +31,7 @@ interface Mediator {
  * Mediator implementation that uses the same disruptor for both requests and commands.
  */
 class MonoDisruptorMediatorImpl(
-    private val context: ApplicationContext,
+    context: ApplicationContext,
 ) : Mediator {
 
     companion object {
