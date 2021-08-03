@@ -170,9 +170,9 @@ interface Handler
 
 // region Request
 // TODO: This interface should not be exposed
-interface Request<TResponse>
+sealed interface Request<TResponse>
 
-interface RequestHandler<TRequest : Request<TResponse>, TResponse> : Handler {
+sealed interface RequestHandler<TRequest : Request<TResponse>, TResponse> : Handler {
     fun handle(request: TRequest): TResponse
 }
 

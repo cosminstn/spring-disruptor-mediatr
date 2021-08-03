@@ -128,19 +128,6 @@ class DisruptorMediatorImpl(
         eventsDisruptor.publishEvent(getTranslator(), event)
     }
 
-//    override fun <TEvent : ApplicationEvent> handleEvents(consumer: Consumer<TEvent>) {
-//        val handler = EventHandler<EventWrapper<TEvent>> { wrapper, _, _ ->
-//            if (wrapper.payload == null) {
-//                return@EventHandler
-//            }
-//
-//            consumer.accept(wrapper.payload!!)
-//            log.info("Consumer for request: " + wrapper.payload!! + " consumed on " + Thread.currentThread().id)
-//        } as EventHandler<EventWrapper<ApplicationEvent>>
-//
-//        eventsDisruptor.handleEventsWith(handler)
-//    }
-
     @Suppress("UNCHECKED_CAST")
     private fun <TRequest : Request<TResponse>, TResponse> getTranslator(
         completableFuture: CompletableFuture<TResponse>?

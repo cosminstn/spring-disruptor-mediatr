@@ -1,4 +1,4 @@
-package tech.sharply.spring_disruptor_mediatr.jobs
+package tech.sharply.spring_disruptor_mediatr.samples
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.scheduling.annotation.Scheduled
