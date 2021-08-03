@@ -23,8 +23,6 @@ interface Mediator {
 
     fun <TEvent : ApplicationEvent> publishEvent(event: TEvent)
 
-//    fun <TEvent : ApplicationEvent> handleEvents(consumer: Consumer<TEvent>)
-
 }
 
 /**
@@ -66,9 +64,13 @@ class DisruptorMediatorImpl(
                 log.info("No handler found for request type: " + request.javaClass)
                 return@EventHandler
             }
-            val result = handler.handle(request)
+            try {
+                val result = handler.handle(request)
+                wrapper.completableFuture.complete(result)
+            } catch (ex: Exception) {
+                wrapper.completableFuture.completeExceptionally(ex)
+            }
 
-            wrapper.completableFuture.complete(result)
             log.info("Consumer for request: " + wrapper.payload!! + " consumed on " + Thread.currentThread().id)
         })
 

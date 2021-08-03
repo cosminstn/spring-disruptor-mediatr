@@ -15,7 +15,7 @@ internal class RegistryImplTest(
     private val context: ApplicationContext
 ) {
 
-    internal class PrintNumberCommand(val number: Int) : Command
+    internal class PrintNumberCommand(val number: Int) : Command<Unit>
 
     internal class GenerateNumberCommand : Command<Int>
 
@@ -25,8 +25,8 @@ internal class RegistryImplTest(
     internal class Config {
 
         @Bean
-        fun printNumberCommandHandler(): CommandHandler<PrintNumberCommand> {
-            return object : CommandHandler<PrintNumberCommand> {
+        fun printNumberCommandHandler(): CommandHandler<PrintNumberCommand, Unit> {
+            return object : CommandHandler<PrintNumberCommand, Unit> {
                 override fun handle(request: PrintNumberCommand) {
                     println(request.number)
                 }
@@ -63,7 +63,7 @@ internal class RegistryImplTest(
     fun getHandler() {
         val commandHandler = registry.getCommandHandler(PrintNumberCommand::class.java)
         assertNotNull(commandHandler)
-        assert(commandHandler is CommandHandler<PrintNumberCommand>)
+        assert(commandHandler is CommandHandler<PrintNumberCommand, Unit>)
     }
 
     @Test
