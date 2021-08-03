@@ -4,9 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import tech.sharply.spring_disruptor_mediatr.mediator.Mediator
-import tech.sharply.spring_disruptor_mediatr.samples.NumberEvent
-import tech.sharply.spring_disruptor_mediatr.samples.PrintThingCommand
-import tech.sharply.spring_disruptor_mediatr.samples.StringEvent
 import javax.annotation.PostConstruct
 
 @Component
