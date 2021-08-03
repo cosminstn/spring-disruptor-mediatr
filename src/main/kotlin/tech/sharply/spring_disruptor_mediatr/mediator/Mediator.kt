@@ -7,6 +7,7 @@ import com.lmax.disruptor.dsl.Disruptor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationEvent
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadFactory
 import javax.annotation.PostConstruct
@@ -20,23 +21,33 @@ interface Mediator {
 
     fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest): CompletableFuture<TResponse>
 
+    fun <TEvent : ApplicationEvent> publishEvent(event: TEvent)
+
+//    fun <TEvent : ApplicationEvent> handleEvents(consumer: Consumer<TEvent>)
+
 }
 
 /**
- * Mediator implementation that uses the same disruptor for both requests and commands.
+ * Mediator implementation that uses the one disruptor for commands and requests and another one for events.
  */
-class MonoDisruptorMediatorImpl(
+class DisruptorMediatorImpl(
     context: ApplicationContext,
 ) : Mediator {
 
     companion object {
-        private val log: Logger = LoggerFactory.getLogger(MonoDisruptorMediatorImpl::class.java)
+        private val log: Logger = LoggerFactory.getLogger(DisruptorMediatorImpl::class.java)
     }
 
-    private val registry = RegistryImpl(context)
+    private val registry: Registry = RegistryImpl(context)
 
     private val disruptor = Disruptor(
         EventFactory { CompletableRequestWrapper.empty() },
+        1024,
+        ThreadFactory { r -> Thread(r) }
+    )
+
+    private val eventsDisruptor = Disruptor(
+        EventFactory { EventWrapper.empty() },
         1024,
         ThreadFactory { r -> Thread(r) }
     )
@@ -45,7 +56,6 @@ class MonoDisruptorMediatorImpl(
     private fun init() {
         disruptor.handleEventsWith(EventHandler { wrapper, _, _ ->
             if (wrapper.payload == null) {
-                log.info("Null command")
                 return@EventHandler
             }
 
@@ -63,6 +73,24 @@ class MonoDisruptorMediatorImpl(
         })
 
         disruptor.start()
+
+        eventsDisruptor.handleEventsWith(EventHandler { wrapper, _, _ ->
+            if (wrapper.payload == null) {
+                return@EventHandler
+            }
+
+            val handlers = registry.getEventHandlers(wrapper.payload!!.javaClass)
+            if (handlers.isEmpty()) {
+                log.info("No handler found for request type: " + wrapper.payload!!.javaClass)
+                return@EventHandler
+            }
+
+            for (handler in handlers) {
+                handler.handle(wrapper.payload!!)
+            }
+            log.info("Handled event " + wrapper.payload!! + " on " + Thread.currentThread().id)
+        })
+        eventsDisruptor.start()
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -94,11 +122,27 @@ class MonoDisruptorMediatorImpl(
         return future
     }
 
+    override fun <TEvent : ApplicationEvent> publishEvent(event: TEvent) {
+        eventsDisruptor.publishEvent(getTranslator(), event)
+    }
+
+//    override fun <TEvent : ApplicationEvent> handleEvents(consumer: Consumer<TEvent>) {
+//        val handler = EventHandler<EventWrapper<TEvent>> { wrapper, _, _ ->
+//            if (wrapper.payload == null) {
+//                return@EventHandler
+//            }
+//
+//            consumer.accept(wrapper.payload!!)
+//            log.info("Consumer for request: " + wrapper.payload!! + " consumed on " + Thread.currentThread().id)
+//        } as EventHandler<EventWrapper<ApplicationEvent>>
+//
+//        eventsDisruptor.handleEventsWith(handler)
+//    }
+
     @Suppress("UNCHECKED_CAST")
     private fun <TRequest : Request<TResponse>, TResponse> getTranslator(
         completableFuture: CompletableFuture<TResponse>?
-    ):
-            EventTranslatorOneArg<CompletableRequestWrapper<Request<Any?>, Any?>, TRequest> {
+    ): EventTranslatorOneArg<CompletableRequestWrapper<Request<Any?>, Any?>, TRequest> {
         return EventTranslatorOneArg<CompletableRequestWrapper<Request<Any?>, Any?>, TRequest> { wrapper, _, input ->
             if (wrapper == null) {
                 return@EventTranslatorOneArg
@@ -106,6 +150,15 @@ class MonoDisruptorMediatorImpl(
 
             wrapper.payload = input as Request<Any?>
             wrapper.completableFuture = completableFuture as CompletableFuture<Any?>? ?: CompletableFuture<Any?>()
+        }
+    }
+
+    private fun <TEvent : ApplicationEvent> getTranslator(): EventTranslatorOneArg<EventWrapper<ApplicationEvent>, TEvent> {
+        return EventTranslatorOneArg<EventWrapper<ApplicationEvent>, TEvent> { wrapper, _, input ->
+            if (wrapper == null) {
+                return@EventTranslatorOneArg
+            }
+            wrapper.payload = input as ApplicationEvent
         }
     }
 
@@ -124,6 +177,23 @@ class MonoDisruptorMediatorImpl(
                 return CompletableRequestWrapper(null)
             }
         }
+    }
+
+    private class EventWrapper<T : ApplicationEvent>(
+        var payload: T?
+    ) {
+
+        companion object {
+            fun empty(): EventWrapper<ApplicationEvent> {
+                return EventWrapper(null)
+            }
+        }
+
+        override fun toString(): String {
+            return "EventWrapper(payload=$payload)"
+        }
 
     }
+
 }
+

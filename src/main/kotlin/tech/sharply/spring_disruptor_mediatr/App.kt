@@ -7,7 +7,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.scheduling.annotation.EnableScheduling
 import tech.sharply.spring_disruptor_mediatr.mediator.Mediator
-import tech.sharply.spring_disruptor_mediatr.mediator.MonoDisruptorMediatorImpl
+import tech.sharply.spring_disruptor_mediatr.mediator.DisruptorMediatorImpl
 
 @EnableScheduling
 @SpringBootApplication
@@ -18,7 +18,7 @@ class App(
 
     @Bean
     fun mediator(): Mediator {
-        return MonoDisruptorMediatorImpl(context)
+        return DisruptorMediatorImpl(context)
     }
 
 }
