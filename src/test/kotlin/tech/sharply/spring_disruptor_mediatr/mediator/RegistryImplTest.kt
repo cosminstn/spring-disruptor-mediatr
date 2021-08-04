@@ -24,7 +24,6 @@ internal class RegistryImplTest(
 
     internal class FindNextNumberQuery(val number: Int) : Query<Int>
 
-
     @TestConfiguration
     internal class Config {
 
@@ -60,6 +59,7 @@ internal class RegistryImplTest(
                 }
             }
         }
+
     }
 
     private lateinit var registry: Registry

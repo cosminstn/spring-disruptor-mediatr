@@ -10,7 +10,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEvent
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadFactory
-import javax.annotation.PostConstruct
+import java.util.concurrent.TimeUnit
 
 interface Mediator {
 
@@ -50,10 +50,10 @@ class DisruptorMediatorImpl(
         ThreadFactory { r -> Thread(r) }
     )
 
-    @PostConstruct
-    private fun init() {
+    init {
         disruptor.handleEventsWith(EventHandler { wrapper, _, _ ->
             if (wrapper.payload == null) {
+                wrapper.completableFuture.completeExceptionally(Exception("Null payload"))
                 return@EventHandler
             }
 
@@ -61,7 +61,7 @@ class DisruptorMediatorImpl(
 
             val handler = getRequestHandler(request)
             if (handler == null) {
-                log.info("No handler found for request type: " + request.javaClass)
+                wrapper.completableFuture.completeExceptionally(Exception("No handler found for request: " + request.javaClass))
                 return@EventHandler
             }
             try {
@@ -111,11 +111,7 @@ class DisruptorMediatorImpl(
     }
 
     override fun <TRequest : Request<TResponse>, TResponse> dispatchBlocking(request: TRequest): TResponse {
-        // find the handle and execute it on the current thread
-        val handler = getRequestHandler(request)
-            ?: throw IllegalArgumentException("No handler found for request type " + request.javaClass)
-        log.info("Executing request $request blocking on thread: ${Thread.currentThread().id}")
-        return handler.handle(request)
+        return dispatchAsync(request).get(1000, TimeUnit.MILLISECONDS)
     }
 
     override fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest): CompletableFuture<TResponse> {
@@ -155,11 +151,6 @@ class DisruptorMediatorImpl(
         var payload: TRequest?,
         var completableFuture: CompletableFuture<TResponse> = CompletableFuture()
     ) {
-
-        fun clear() {
-            this.payload = null
-            this.completableFuture = CompletableFuture<TResponse>()
-        }
 
         companion object {
             fun empty(): CompletableRequestWrapper<Request<Any?>, Any?> {

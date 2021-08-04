@@ -31,6 +31,8 @@ dependencies {
     // https://mvnrepository.com/artifact/com.lmax/disruptor
     implementation("com.lmax:disruptor:3.4.4")
 
+    testImplementation("org.awaitility:awaitility-kotlin:4.1.0")
+
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
