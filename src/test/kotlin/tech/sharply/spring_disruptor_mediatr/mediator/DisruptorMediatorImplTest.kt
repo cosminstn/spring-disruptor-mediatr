@@ -3,6 +3,7 @@ package tech.sharply.spring_disruptor_mediatr.mediator
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.ApplicationContext
@@ -19,7 +20,7 @@ internal class DisruptorMediatorImplTest(
     private val context: ApplicationContext
 ) {
 
-    @TestConfiguration
+    @SpringBootApplication
     internal class Config {
 
         class IncrementNumberCommand(val atomic: AtomicInteger) : Command<Unit>

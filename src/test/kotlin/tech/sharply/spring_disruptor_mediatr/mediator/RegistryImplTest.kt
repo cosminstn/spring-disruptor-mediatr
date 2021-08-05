@@ -3,6 +3,7 @@ package tech.sharply.spring_disruptor_mediatr.mediator
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.ApplicationContext
@@ -24,7 +25,7 @@ internal class RegistryImplTest(
 
     internal class FindNextNumberQuery(val number: Int) : Query<Int>
 
-    @TestConfiguration
+    @SpringBootApplication
     internal class Config {
 
         @Component
