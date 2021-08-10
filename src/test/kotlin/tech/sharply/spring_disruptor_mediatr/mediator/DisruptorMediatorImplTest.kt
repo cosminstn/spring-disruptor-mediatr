@@ -5,11 +5,13 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEvent
 import org.springframework.stereotype.Component
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.PostConstruct
@@ -26,9 +28,18 @@ internal class DisruptorMediatorImplTest(
         class IncrementNumberCommand(val atomic: AtomicInteger) : Command<Unit>
 
         @Component
-        class IncrementAtomicCommandHandler : CommandHandler<IncrementNumberCommand, Unit> {
+        class IncrementNumberCommandHandler : CommandHandler<IncrementNumberCommand, Unit> {
             override fun handle(request: IncrementNumberCommand) {
                 request.atomic.incrementAndGet()
+            }
+        }
+
+        class GetHandlerThreadCommand : Command<Thread>
+
+        @Component
+        class GetHandlerThreadCommandHandler : CommandHandler<GetHandlerThreadCommand, Thread> {
+            override fun handle(request: GetHandlerThreadCommand): Thread {
+                return Thread.currentThread()
             }
         }
 
@@ -70,6 +81,30 @@ internal class DisruptorMediatorImplTest(
         mediator.publishEvent(Config.NothingHappenedEvent(handled, this))
         await().atMost(Duration.ofSeconds(1))
             .until { handled.get() }
+    }
+
+    @Test
+    fun testCommandsDispatchedFromDifferentThreadsAreAllHandledOnSameThread() {
+        val threadsCount = 10
+        val requestsCount = 1000
+
+        val callingThreads = ConcurrentHashMap.newKeySet<Thread>()
+        val handlingThreads = ConcurrentHashMap.newKeySet<Thread>()
+
+        val threadsPool = Executors.newFixedThreadPool(threadsCount)
+        val countDownLatch = CountDownLatch(requestsCount)
+        for (requestIndex in 1..requestsCount) {
+            threadsPool.submit {
+                callingThreads.add(Thread.currentThread())
+                handlingThreads.add(mediator.dispatchBlocking(Config.GetHandlerThreadCommand()))
+                countDownLatch.countDown()
+            }
+        }
+
+        countDownLatch.await()
+
+        assert(callingThreads.size > 1)
+        assert(handlingThreads.size == 1)
     }
 
 }
