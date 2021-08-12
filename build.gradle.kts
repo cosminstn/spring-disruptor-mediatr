@@ -6,6 +6,7 @@ plugins {
     kotlin("jvm") version "1.5.21"
     kotlin("plugin.spring") version "1.5.21"
     kotlin("plugin.serialization") version "1.5.21"
+    jacoco
 }
 
 group = "tech.sharply"
