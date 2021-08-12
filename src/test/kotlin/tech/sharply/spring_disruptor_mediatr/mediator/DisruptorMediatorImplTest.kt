@@ -34,6 +34,16 @@ internal class DisruptorMediatorImplTest(
             }
         }
 
+        class GetNextNumberQuery(val number: Int): Query<Int>
+
+        @Component
+        class GetNextNumberQueryHandler : QueryHandler<GetNextNumberQuery, Int> {
+            override fun handle(request: GetNextNumberQuery): Int {
+                return request.number + 1
+            }
+
+        }
+
         class GetHandlerThreadCommand : Command<Thread>
 
         @Component
@@ -61,19 +71,33 @@ internal class DisruptorMediatorImplTest(
     }
 
     @Test
-    fun dispatchBlocking() {
+    fun dispatchCommandBlocking() {
         val atomic = AtomicInteger(5)
         mediator.dispatchBlocking(Config.IncrementNumberCommand(atomic))
         assert(atomic.get() == 6)
     }
 
     @Test
-    fun dispatchAsync() {
+    fun dispatchCommandAsync() {
         val number = AtomicInteger(1)
         mediator.dispatchAsync(Config.IncrementNumberCommand(number))
         await().atMost(Duration.ofSeconds(1))
             .until { number.get() == 2 }
     }
+
+    @Test
+    fun dispatchQueryBlocking() {
+        val nextNumber = mediator.dispatchBlocking(Config.GetNextNumberQuery(5))
+        assert(nextNumber == 6)
+    }
+
+    @Test
+    fun dispatchQueryAsync() {
+        val future = mediator.dispatchAsync(Config.GetNextNumberQuery(1))
+        await().atMost(Duration.ofSeconds(1))
+            .until { future.isDone && future.get() == 2 }
+    }
+
 
     @Test
     fun publishEvent() {
