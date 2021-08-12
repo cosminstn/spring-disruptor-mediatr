@@ -1,3 +1,6 @@
+
+![tests](https://github.com/cosmyn9708/spring-disrutor-mediatr/actions/workflows/gradle-test.yml/badge.svg)
+
 # About
 Mediator implementation that uses the Disruptor to handle commands, queries and events.
 

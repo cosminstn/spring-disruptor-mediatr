@@ -110,7 +110,7 @@ internal class DisruptorMediatorImplTest(
     @Test
     fun testCommandsDispatchedFromDifferentThreadsAreAllHandledOnSameThread() {
         val threadsCount = 10
-        val requestsCount = 1000
+        val requestsCount = 100
 
         val callingThreads = ConcurrentHashMap.newKeySet<Thread>()
         val handlingThreads = ConcurrentHashMap.newKeySet<Thread>()
