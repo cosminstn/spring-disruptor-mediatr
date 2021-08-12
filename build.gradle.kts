@@ -6,6 +6,8 @@ plugins {
     kotlin("jvm") version "1.5.21"
     kotlin("plugin.spring") version "1.5.21"
     kotlin("plugin.serialization") version "1.5.21"
+
+    `maven-publish`
 }
 
 group = "tech.sharply"
@@ -18,6 +20,24 @@ configurations {
     }
 }
 
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/cosmyn9708/spring-disruptor-mediatr/")
+            credentials {
+                username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_USERNAME")
+                password =
+                    project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_PACKAGES_REPOSITORY_TOKEN")
+            }
+        }
+    }
+    publications {
+        register<MavenPublication>("gpr") {
+            from(components["java"])
+        }
+    }
+}
 repositories {
     mavenCentral()
 }
