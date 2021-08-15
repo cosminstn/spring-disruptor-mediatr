@@ -26,8 +26,7 @@ interface Mediator {
 }
 
 /**
- * [Mediator] implementation that uses one disruptor for commands and requests and another one for events.
- * TODO: Use the same disruptor for both requests and events.
+ * [Mediator] implementation that uses the same disruptor commands, queries and events.
  */
 class DisruptorMediatorImpl(
     context: ApplicationContext,
@@ -40,60 +39,56 @@ class DisruptorMediatorImpl(
     private val registry: Registry = RegistryImpl(context)
 
     private val disruptor = Disruptor(
-        EventFactory { CompletableRequestWrapper.empty() },
-        1024,
-        ThreadFactory { r -> Thread(r) }
-    )
-
-    private val eventsDisruptor = Disruptor(
-        EventFactory { EventWrapper.empty() },
+        EventFactory { MessageWrapper.empty() },
         1024,
         ThreadFactory { r -> Thread(r) }
     )
 
     init {
         disruptor.handleEventsWith(EventHandler { wrapper, _, _ ->
-            if (wrapper.payload == null) {
-                wrapper.completableFuture.completeExceptionally(Exception("Null payload"))
+            if (wrapper.isEmpty()) {
+                wrapper.requestCompletableFuture.completeExceptionally(Exception("Null payload"))
                 return@EventHandler
             }
 
-            val request = wrapper.payload!!
+            if (wrapper.isRequestWrapper()) {
+                val request = wrapper.request!!
+                val handler = getRequestHandler(request)
+                if (handler == null) {
+                    wrapper.requestCompletableFuture.completeExceptionally(Exception("No handler found for request: " + request.javaClass))
+                    return@EventHandler
+                }
+                try {
+                    val result = handler.handle(request)
+                    wrapper.requestCompletableFuture.complete(result)
+                } catch (ex: Exception) {
+                    wrapper.requestCompletableFuture.completeExceptionally(ex)
+                }
 
-            val handler = getRequestHandler(request)
-            if (handler == null) {
-                wrapper.completableFuture.completeExceptionally(Exception("No handler found for request: " + request.javaClass))
-                return@EventHandler
-            }
-            try {
-                val result = handler.handle(request)
-                wrapper.completableFuture.complete(result)
-            } catch (ex: Exception) {
-                wrapper.completableFuture.completeExceptionally(ex)
+                log.info("Consumer for request: " + request + " consumed on " + Thread.currentThread().id)
+            } else if (wrapper.isEventWrapper()) {
+                val event = wrapper.event!!
+                val handlers = registry.getEventHandlers(event.javaClass)
+                if (handlers.isEmpty()) {
+                    log.info("No handler found for request type: " + event.javaClass)
+                    return@EventHandler
+                }
+
+                for (handler in handlers) {
+                    try {
+                        handler.handle(event)
+                    } catch (ex: Exception) {
+                        log.error("Could not handle event " + event + " in handler " + handler.javaClass.simpleName)
+                    }
+                }
+                log.info("Handled event " + event + " on " + Thread.currentThread().id)
             }
 
-            log.info("Consumer for request: " + wrapper.payload!! + " consumed on " + Thread.currentThread().id)
+
         })
 
         disruptor.start()
 
-        eventsDisruptor.handleEventsWith(EventHandler { wrapper, _, _ ->
-            if (wrapper.payload == null) {
-                return@EventHandler
-            }
-
-            val handlers = registry.getEventHandlers(wrapper.payload!!.javaClass)
-            if (handlers.isEmpty()) {
-                log.info("No handler found for request type: " + wrapper.payload!!.javaClass)
-                return@EventHandler
-            }
-
-            for (handler in handlers) {
-                handler.handle(wrapper.payload!!)
-            }
-            log.info("Handled event " + wrapper.payload!! + " on " + Thread.currentThread().id)
-        })
-        eventsDisruptor.start()
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -117,67 +112,89 @@ class DisruptorMediatorImpl(
 
     override fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest): CompletableFuture<TResponse> {
         val future = CompletableFuture<TResponse>()
-        disruptor.publishEvent(getTranslator(future), request)
+        disruptor.publishEvent(getRequestTranslator(future), request)
         return future
     }
 
     override fun <TEvent : AppEvent> publishEvent(event: TEvent) {
-        eventsDisruptor.publishEvent(getTranslator(), event)
+        disruptor.publishEvent(getEventTranslator(), event)
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <TRequest : Request<TResponse>, TResponse> getTranslator(
+    private fun <TRequest : Request<TResponse>, TResponse> getRequestTranslator(
         completableFuture: CompletableFuture<TResponse>?
-    ): EventTranslatorOneArg<CompletableRequestWrapper<Request<Any?>, Any?>, TRequest> {
-        return EventTranslatorOneArg<CompletableRequestWrapper<Request<Any?>, Any?>, TRequest> { wrapper, _, input ->
+    ): EventTranslatorOneArg<MessageWrapper<Request<Any?>, Any?, AppEvent>, TRequest> {
+        return EventTranslatorOneArg<MessageWrapper<Request<Any?>, Any?, AppEvent>, TRequest> { wrapper, _, input ->
             if (wrapper == null) {
                 return@EventTranslatorOneArg
             }
 
-            wrapper.payload = input as Request<Any?>
-            wrapper.completableFuture = completableFuture as CompletableFuture<Any?>? ?: CompletableFuture<Any?>()
+            wrapper.clear()
+
+            wrapper.request = input as Request<Any?>
+            wrapper.requestCompletableFuture =
+                completableFuture as CompletableFuture<Any?>? ?: CompletableFuture<Any?>()
         }
     }
 
-    private fun <TEvent : AppEvent> getTranslator(): EventTranslatorOneArg<EventWrapper<AppEvent>, TEvent> {
-        return EventTranslatorOneArg<EventWrapper<AppEvent>, TEvent> { wrapper, _, input ->
+    private fun <TEvent : AppEvent> getEventTranslator(): EventTranslatorOneArg<MessageWrapper<Request<Any?>, Any?, AppEvent>, TEvent> {
+        return EventTranslatorOneArg<MessageWrapper<Request<Any?>, Any?, AppEvent>, TEvent> { wrapper, _, input ->
             if (wrapper == null) {
                 return@EventTranslatorOneArg
             }
-            wrapper.payload = input as AppEvent
+
+            wrapper.clear()
+
+            wrapper.event = input as AppEvent
         }
     }
 
-    private class CompletableRequestWrapper<TRequest : Request<TResponse>, TResponse>(
-        var payload: TRequest?,
-        var completableFuture: CompletableFuture<TResponse> = CompletableFuture()
+    private class MessageWrapper<TRequest : Request<TResponse>, TResponse, TEvent : AppEvent>(
+        // request info
+        var request: TRequest?,
+        var requestCompletableFuture: CompletableFuture<TResponse> = CompletableFuture(),
+        // event info
+        var event: TEvent?
     ) {
 
         companion object {
-            fun empty(): CompletableRequestWrapper<Request<Any?>, Any?> {
-                return CompletableRequestWrapper(null)
+            fun empty(): MessageWrapper<Request<Any?>, Any?, AppEvent> {
+                return MessageWrapper(request = null, event = null)
             }
         }
 
-        override fun toString(): String {
-            return "CompletableRequestWrapper(payload=$payload)"
+        fun clear() {
+            this.request = null
+            this.requestCompletableFuture = CompletableFuture()
+            this.event = null
         }
-    }
 
-    private class EventWrapper<T : AppEvent>(
-        var payload: T?
-    ) {
+        fun isEmpty(): Boolean {
+            return request == null && event == null
+        }
 
-        companion object {
-            fun empty(): EventWrapper<AppEvent> {
-                return EventWrapper(null)
+        fun isRequestWrapper(): Boolean {
+            return request != null
+        }
+
+        fun isEventWrapper(): Boolean {
+            return event != null
+        }
+
+        override fun toString(): String {
+            return when {
+                isEmpty() -> {
+                    "EmptyWrapper"
+                }
+                isRequestWrapper() -> {
+                    "CompletableRequestWrapper(payload=$request)"
+                }
+                isEventWrapper() -> {
+                    "EventWrapper(event=$event)"
+                }
+                else -> "NullWrapper"
             }
         }
-
-        override fun toString(): String {
-            return "EventWrapper(payload=$payload)"
-        }
-
     }
 
 }

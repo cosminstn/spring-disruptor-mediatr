@@ -60,6 +60,7 @@ internal class DisruptorMediatorImplTest(
                 event.handled.set(true)
             }
         }
+
     }
 
     private lateinit var mediator: Mediator
@@ -96,7 +97,6 @@ internal class DisruptorMediatorImplTest(
         await().atMost(Duration.ofSeconds(1))
             .until { future.isDone && future.get() == 2 }
     }
-
 
     @Test
     fun publishEvent() {
