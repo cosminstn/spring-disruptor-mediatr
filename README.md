@@ -2,7 +2,8 @@
 
 # About
 
-Performant Mediator implementation that uses the [Disruptor](https://github.com/LMAX-Exchange/disruptor) to handle commands, queries and events.  
+Performant Mediator implementation that uses the [Disruptor](https://github.com/LMAX-Exchange/disruptor) to handle
+commands, queries and events.  
 This library is heavily inspired by [github.com/jkratz55/spring-mediatR](https://github.com/jkratz55/spring-mediatR).
 
 ## Installation
@@ -20,26 +21,46 @@ the [docs](https://docs.github.com/en/packages/working-with-a-github-packages-re
 
    More info here
    [https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry#authenticating-to-github-packages](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry#authenticating-to-github-packages)
-1. Register the repository of this project
+   
+
+2. Register the repository of this project
 
    The only important thing to note is that you need to register the maven repository of this project.  
-   Also, GitHub requires you to be authenticated to access that repository, even though both, the project and the package, are public.  
-   I strongly recommend you go read the docs [here](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry), and [here](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry)  
+   Also, GitHub requires you to be authenticated to access that repository, even though both, the project and the
+   package, are public.  
+   I strongly recommend you go read the
+   docs [here](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry)
+   ,
+   and [here](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry)  
    Gradle:   
    *build.gradle*
-    ```
-   ...
+    ```groovy
+   //...
    repositories {
       maven {
          url = "https://github.com/cosmyn9708/tech"
-         username = YOUR_GITHUB_USERNAME
-         password = THE_TOKEN_GENERATED_AT_STEP_1
+         credentials {
+            username = YOUR_GITHUB_USERNAME
+            password = THE_TOKEN_GENERATED_AT_STEP_1
+         }
       }
    }
-   ...
+   //...
    ```
-   **WARNING**: The `/tech` in the repository url is **NOT** a mistake! For whatever reason GitHub does that to my domain. Trying to use the repository without the `/tech` at the end will not work!!
-1. 
+   **WARNING**: The `/tech` in the repository url is **NOT** a mistake! For whatever reason GitHub does that to my
+   domain. Trying to use the repository without the `/tech` at the end will not work!!
+   
+
+3. Add the dependency
+   ```groovy
+   //...
+   dependencies {
+        //...
+        implementation 'org.webjars.bower:js-beautify:1.14.0'
+   }
+   //...
+   ```
+
 # How to use
 
 For each request (command/query) two classes should be defined:
