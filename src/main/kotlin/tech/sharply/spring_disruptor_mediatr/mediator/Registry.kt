@@ -179,7 +179,10 @@ sealed interface RequestHandler<TRequest : Request<TResponse>, TResponse> : Hand
 // endregion
 
 // region Command
-
+/**
+ * A command represents a unit of work that changes the internal system state.
+ * Commands
+ */
 interface Command<TResponse> : Request<TResponse>
 
 interface CommandHandler<TCommand : Command<TResponse>, TResponse> :
@@ -194,7 +197,10 @@ fun <TCommand : Command<TResponse>, TResponse> CommandHandler<TCommand, TRespons
 // endregion Command
 
 // region Query
-
+/**
+ * A query represents a unit ot work that returns a result without changing the internal system state.
+ * If one unit of work changes the system state than that unit is a command, not a query.
+ */
 interface Query<TResponse> : Request<TResponse>
 
 interface QueryHandler<TQuery : Query<TResponse>, TResponse> : RequestHandler<TQuery, TResponse>

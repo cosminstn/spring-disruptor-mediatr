@@ -12,11 +12,12 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 
+/**
+ * The Mediator is the component that dispatches commands, queries and events to their respective handlers.
+ * There are two types of requests: [Command] and [Query].
+ */
 interface Mediator {
 
-    /**
-     * Request handling
-     */
     fun <TRequest : Request<TResponse>, TResponse> dispatchBlocking(request: TRequest): TResponse
 
     fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest): CompletableFuture<TResponse>
@@ -26,7 +27,7 @@ interface Mediator {
 }
 
 /**
- * Mediator implementation that uses the one disruptor for commands and requests and another one for events.
+ * [Mediator] implementation that uses the one disruptor for commands and requests and another one for events.
  */
 class DisruptorMediatorImpl(
     context: ApplicationContext,
@@ -111,7 +112,7 @@ class DisruptorMediatorImpl(
     }
 
     override fun <TRequest : Request<TResponse>, TResponse> dispatchBlocking(request: TRequest): TResponse {
-        return dispatchAsync(request).get(1000, TimeUnit.MILLISECONDS)
+        return dispatchAsync(request).get(1, TimeUnit.MINUTES)
     }
 
     override fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest): CompletableFuture<TResponse> {
