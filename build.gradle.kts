@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "tech.sharply"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.2"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 configurations {
@@ -68,3 +68,79 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// region Version Increment
+data class Version(
+    val major: Int,
+    val minor: Int,
+    val patch: Int
+) {
+
+    fun bumpPatch(): Version {
+        return Version(this.major, this.minor, patch + 1)
+    }
+
+    fun bumpMinor(): Version {
+        return Version(this.major, this.minor + 1, 0)
+    }
+
+    fun bumpMajor(): Version {
+        return Version(this.major + 1, 0, 0)
+    }
+
+    override fun toString(): String {
+        return "$major.$minor.$patch"
+    }
+
+    companion object {
+        fun versionFromCode(code: String): Version {
+            val versionParts = code.toLowerCase()
+                .replace(" ", "")
+                .replace("version", "")
+                .replace("snapshot", "")
+                .replace("-", "")
+                .split(".")
+            if (versionParts.size != 3) {
+                throw IllegalArgumentException(
+                    "Invalid version code! " +
+                            "Must contain major, minor and patch, separated by dots!"
+                )
+            }
+            return Version(versionParts[0].toInt(), versionParts[1].toInt(), versionParts[2].toInt())
+        }
+    }
+}
+
+tasks.create("bumpPatch") {
+    doLast {
+        val currentVersion = Version.versionFromCode(version.toString())
+        val newVersion = currentVersion.bumpPatch()
+        println("New version: $newVersion")
+        val buildFileContent = buildFile.readText()
+            .replaceFirst("version = \"$currentVersion\"", "version = \"$newVersion\"")
+        buildFile.writeText(buildFileContent)
+    }
+}
+
+tasks.create("bumpMinor") {
+    doLast {
+        val currentVersion = Version.versionFromCode(version.toString())
+        val newVersion = currentVersion.bumpMinor()
+        println("New version: $newVersion")
+        val buildFileContent = buildFile.readText()
+            .replaceFirst("version = \"$currentVersion\"", "version = \"$newVersion\"")
+        buildFile.writeText(buildFileContent)
+    }
+}
+
+tasks.create("bumpMajor") {
+    doLast {
+        val currentVersion = Version.versionFromCode(version.toString())
+        val newVersion = currentVersion.bumpMinor()
+        println("New version: $newVersion")
+        val buildFileContent = buildFile.readText()
+            .replaceFirst("version = \"$currentVersion\"", "version = \"$newVersion\"")
+        buildFile.writeText(buildFileContent)
+    }
+}
+// endregion
