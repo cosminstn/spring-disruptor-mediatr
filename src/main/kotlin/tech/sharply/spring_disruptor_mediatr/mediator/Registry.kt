@@ -13,8 +13,9 @@ interface Registry {
     fun <TQuery : Query<TResponse>, TResponse> getQueryHandler(queryClass: Class<TQuery>)
             : QueryHandler<TQuery, TResponse>?
 
-    fun <TEvent : ApplicationEvent> getEventHandlers(eventClass: Class<TEvent>)
-            : List<ApplicationEventHandler<TEvent>>
+    fun <TEvent : AppEvent> getEventHandlers(eventClass: Class<TEvent>)
+            : List<AppEventHandler<TEvent>>
+
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -30,7 +31,7 @@ class RegistryImpl(
     private val commandHandlersByType:
             MutableMap<Class<Command<*>>, CommandHandler<Command<*>, *>> = HashMap()
     private val queryHandlersByType: MutableMap<Class<Query<*>>, QueryHandler<Query<*>, *>> = HashMap()
-    private val eventHandlersByType: MutableMap<Class<ApplicationEvent>, MutableList<ApplicationEventHandler<ApplicationEvent>>> =
+    private val eventHandlersByType: MutableMap<Class<ApplicationEvent>, MutableList<AppEventHandler<AppEvent>>> =
         HashMap()
 
     init {
@@ -48,7 +49,7 @@ class RegistryImpl(
         for (handler in context.getBeansOfType(QueryHandler::class.java)) {
             registerQueryHandler(handler.key, handler.value)
         }
-        for (handler in context.getBeansOfType(ApplicationEventHandler::class.java)) {
+        for (handler in context.getBeansOfType(AppEventHandler::class.java)) {
             registerEventHandler(handler.key, handler.value)
         }
     }
@@ -109,9 +110,9 @@ class RegistryImpl(
         )
     }
 
-    private fun <TEvent : ApplicationEvent> registerEventHandler(
+    private fun <TEvent : AppEvent> registerEventHandler(
         name: String,
-        handler: ApplicationEventHandler<TEvent>
+        handler: AppEventHandler<TEvent>
     ) {
         log.debug("Registering EventHandler with name $")
 
@@ -126,7 +127,7 @@ class RegistryImpl(
             eventHandlersByType[eventType] = mutableListOf()
         }
         val handlersList = eventHandlersByType[eventType]
-        handlersList!!.add(handler as ApplicationEventHandler<ApplicationEvent>)
+        handlersList!!.add(handler as AppEventHandler<AppEvent>)
     }
 
     override fun <TCommand : Command<TResponse>, TResponse> getCommandHandler(commandClass: Class<TCommand>)
@@ -152,13 +153,13 @@ class RegistryImpl(
         return handler
     }
 
-    override fun <TEvent : ApplicationEvent> getEventHandlers(eventClass: Class<TEvent>): List<ApplicationEventHandler<TEvent>> {
+    override fun <TEvent : AppEvent> getEventHandlers(eventClass: Class<TEvent>): List<AppEventHandler<TEvent>> {
         val handlers =
-            eventHandlersByType[eventClass as Class<ApplicationEvent>] as List<ApplicationEventHandler<TEvent>>?
+            eventHandlersByType[eventClass as Class<ApplicationEvent>] as List<AppEventHandler<TEvent>>?
         if (handlers == null) {
             registerHandlers()
             // search again for the handlers
-            return eventHandlersByType[eventClass] as List<ApplicationEventHandler<TEvent>>?
+            return eventHandlersByType[eventClass] as List<AppEventHandler<TEvent>>?
                 ?: return listOf()
         }
         return handlers
@@ -166,11 +167,13 @@ class RegistryImpl(
 
 }
 
+interface Message
+
 interface Handler
 
 // region Request
-// TODO: This interface should not be exposed
-sealed interface Request<TResponse>
+
+sealed interface Request<TResponse> : Message
 
 sealed interface RequestHandler<TRequest : Request<TResponse>, TResponse> : Handler {
     fun handle(request: TRequest): TResponse
@@ -212,11 +215,13 @@ fun <TQuery : Query<TResponse>, TResponse> QueryHandler<TQuery, TResponse>.getCo
 }
 // endregion
 
-interface ApplicationEventHandler<TEvent : ApplicationEvent> : Handler {
+abstract class AppEvent(source: Any) : ApplicationEvent(source), Message
+
+interface AppEventHandler<TEvent : AppEvent> : Handler {
     fun handle(event: TEvent)
 }
 
 @Suppress("UNCHECKED_CAST")
-fun <TEvent : ApplicationEvent> ApplicationEventHandler<TEvent>.getEventClass(): Class<TEvent> {
-    return GenericTypeResolver.resolveTypeArgument(javaClass, ApplicationEventHandler::class.java) as Class<TEvent>
+fun <TEvent : AppEvent> AppEventHandler<TEvent>.getEventClass(): Class<TEvent> {
+    return GenericTypeResolver.resolveTypeArgument(javaClass, AppEventHandler::class.java) as Class<TEvent>
 }

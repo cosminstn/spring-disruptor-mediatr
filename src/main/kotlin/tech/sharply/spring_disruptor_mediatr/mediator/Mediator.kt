@@ -7,7 +7,6 @@ import com.lmax.disruptor.dsl.Disruptor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationEvent
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
@@ -22,12 +21,13 @@ interface Mediator {
 
     fun <TRequest : Request<TResponse>, TResponse> dispatchAsync(request: TRequest): CompletableFuture<TResponse>
 
-    fun <TEvent : ApplicationEvent> publishEvent(event: TEvent)
+    fun <TEvent : AppEvent> publishEvent(event: TEvent)
 
 }
 
 /**
- * [Mediator] implementation that uses the one disruptor for commands and requests and another one for events.
+ * [Mediator] implementation that uses one disruptor for commands and requests and another one for events.
+ * TODO: Use the same disruptor for both requests and events.
  */
 class DisruptorMediatorImpl(
     context: ApplicationContext,
@@ -121,7 +121,7 @@ class DisruptorMediatorImpl(
         return future
     }
 
-    override fun <TEvent : ApplicationEvent> publishEvent(event: TEvent) {
+    override fun <TEvent : AppEvent> publishEvent(event: TEvent) {
         eventsDisruptor.publishEvent(getTranslator(), event)
     }
 
@@ -139,12 +139,12 @@ class DisruptorMediatorImpl(
         }
     }
 
-    private fun <TEvent : ApplicationEvent> getTranslator(): EventTranslatorOneArg<EventWrapper<ApplicationEvent>, TEvent> {
-        return EventTranslatorOneArg<EventWrapper<ApplicationEvent>, TEvent> { wrapper, _, input ->
+    private fun <TEvent : AppEvent> getTranslator(): EventTranslatorOneArg<EventWrapper<AppEvent>, TEvent> {
+        return EventTranslatorOneArg<EventWrapper<AppEvent>, TEvent> { wrapper, _, input ->
             if (wrapper == null) {
                 return@EventTranslatorOneArg
             }
-            wrapper.payload = input as ApplicationEvent
+            wrapper.payload = input as AppEvent
         }
     }
 
@@ -158,14 +158,18 @@ class DisruptorMediatorImpl(
                 return CompletableRequestWrapper(null)
             }
         }
+
+        override fun toString(): String {
+            return "CompletableRequestWrapper(payload=$payload)"
+        }
     }
 
-    private class EventWrapper<T : ApplicationEvent>(
+    private class EventWrapper<T : AppEvent>(
         var payload: T?
     ) {
 
         companion object {
-            fun empty(): EventWrapper<ApplicationEvent> {
+            fun empty(): EventWrapper<AppEvent> {
                 return EventWrapper(null)
             }
         }

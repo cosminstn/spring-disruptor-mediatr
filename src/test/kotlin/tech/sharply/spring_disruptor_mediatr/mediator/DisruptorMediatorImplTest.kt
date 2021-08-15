@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationEvent
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
@@ -53,10 +52,10 @@ internal class DisruptorMediatorImplTest(
             }
         }
 
-        class NothingHappenedEvent(val handled: AtomicBoolean, source: Any) : ApplicationEvent(source)
+        class NothingHappenedEvent(val handled: AtomicBoolean, source: Any) : AppEvent(source)
 
         @Component
-        class AtomicEventHandler : ApplicationEventHandler<NothingHappenedEvent> {
+        class AtomicEventHandler : AppEventHandler<NothingHappenedEvent> {
             override fun handle(event: NothingHappenedEvent) {
                 event.handled.set(true)
             }
