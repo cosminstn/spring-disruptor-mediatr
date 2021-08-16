@@ -2,15 +2,19 @@ package tech.sharply.spring_disruptor_mediatr.mediator
 
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContext
+import org.springframework.context.annotation.Description
 import org.springframework.stereotype.Component
+import java.lang.IllegalArgumentException
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.PostConstruct
@@ -33,7 +37,7 @@ internal class DisruptorMediatorImplTest(
             }
         }
 
-        class GetNextNumberQuery(val number: Int): Query<Int>
+        class GetNextNumberQuery(val number: Int) : Query<Int>
 
         @Component
         class GetNextNumberQueryHandler : QueryHandler<GetNextNumberQuery, Int> {
@@ -124,10 +128,39 @@ internal class DisruptorMediatorImplTest(
             }
         }
 
-        countDownLatch.await()
+        countDownLatch.await(1, TimeUnit.MINUTES)
 
         assert(callingThreads.size > 1)
         assert(handlingThreads.size == 1)
+    }
+
+    @Description(
+        """
+        Tests that requests are handled on the correct thread, the one specified by the 
+        executorGroupId, when dispatched blocking.
+        """
+    )
+    @Test
+    fun testExecutorGrouping_whenDispatchBlocking() {
+        val executorGroupingMediator = DisruptorMediatorImpl(context, 4)
+
+        val firstExecutionThread = executorGroupingMediator.dispatchBlocking(
+            Config.GetHandlerThreadCommand(),
+            1
+        )
+
+        val secondExecutionThread = executorGroupingMediator.dispatchBlocking(
+            Config.GetHandlerThreadCommand(),
+            2
+        )
+
+        assert(firstExecutionThread.id != secondExecutionThread.id)
+    }
+
+
+    @Test
+    fun whenConstructorIsCalledWithInvalidExecutorsGroupsSize_thenThrowsIllegalArgumentException() {
+        assertThrows<IllegalArgumentException> { DisruptorMediatorImpl(context, 0) }
     }
 
 }

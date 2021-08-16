@@ -23,7 +23,7 @@ public class DisruptorMediatorImplJavaTest {
 
 	@PostConstruct
 	public void init() {
-		this.mediator = new DisruptorMediatorImpl(context);
+		this.mediator = new DisruptorMediatorImpl(context, 1);
 	}
 
 	@Test
