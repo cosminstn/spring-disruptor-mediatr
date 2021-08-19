@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "tech.sharply"
-version = "0.1.0"
+version = "0.2.0"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 configurations {
@@ -24,7 +24,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/cosmyn9708/spring-disruptor-mediatr/")
+            url = uri("https://maven.pkg.github.com/cosminstn/spring-disruptor-mediatr/")
             credentials {
                 username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_USERNAME")
                 password =
