@@ -27,6 +27,16 @@ interface Mediator {
 
 /**
  * Allow specifying the execution group (thread pool) when dispatching requests.
+ *
+ * E.g.: If you want to dispatch a command C1 and a query Q1, and you want to know that they will not be handled
+ * on the same thread you can call dispatchAsync(C1, 1), dispatchAsync(Q1, 2).
+ *
+ * This way you know for certain that their respective handling methods will be executed on separate threads.
+ * Also, for each executor group there is only 1 thread assigned, so if you dispatch two requests with the same
+ * **executorGroupId** then you can be sure they will be executed on the same thread.
+ *
+ * By default, the standard [DisruptorMediatorImpl] uses a single executor group, so all requests are
+ * handled on the same thread.
  */
 interface ExecutorGroupingMediator : Mediator {
 
@@ -61,7 +71,7 @@ private interface IdentifiableDisruptorEventHandler<T> : EventHandler<T> {
 }
 
 /**
- * [Mediator] implementation that uses the same disruptor commands, queries and events.
+ * [Mediator] implementation that uses one disruptor to handle commands, queries and events.
  */
 class DisruptorMediatorImpl(
     context: ApplicationContext,
